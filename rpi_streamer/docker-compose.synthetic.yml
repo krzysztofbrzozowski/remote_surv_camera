@@ -1,0 +1,12 @@
+# RPi Streamer — synthetic test pattern
+# Usage: docker compose -f docker-compose.synthetic.yml up --build
+#
+# Generates a test pattern stream, works anywhere.
+# Server must be running (see server/docker-compose.yml)
+
+services:
+  synthetic-streamer:
+    build: .
+    volumes:
+      - ./configs/synthetic.yaml:/app/config.yaml:ro
+    restart: on-failure

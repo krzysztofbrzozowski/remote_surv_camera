@@ -1,0 +1,16 @@
+# macOS camera — uses built-in or USB webcam via OpenCV
+# Real motion detection (frame differencing algorithm)
+server_url: "ws://192.168.1.100:8000/ws/camera/feed/"
+camera_id: "macos-cam"
+camera_source: "macos"
+
+frame_width: 1920  # 1080 resolution
+frame_height: 1080
+fps: 30  # Max FPS (when motion detected)
+idle_fps: 1  # FPS when idle (no motion, 1 frame per 10s)
+jpeg_quality: 70
+
+# Motion detection parameters (optional)
+motion_threshold: 25  # Pixel difference threshold (lower = more sensitive)
+min_motion_area: 500  # Minimum pixels that must change
+detection_cooldown: 3.0  # Seconds to stay at 30fps after motion stops

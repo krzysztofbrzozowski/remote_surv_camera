@@ -1,0 +1,17 @@
+{% extends "two_factor/_base_focus.html" %}
+{% load i18n %}
+
+{% block title %}Disable 2FA — surv_cam{% endblock %}
+
+{% block content %}
+<h1 style="font-size:1.3em; font-weight:600; margin-bottom:12px; color:#dc2626;">Disable Two-Factor Authentication</h1>
+<p style="color:#525252; font-size:0.9em; line-height:1.6; margin-bottom:20px;">
+    Are you sure? This will remove 2FA from your account and make it less secure.
+</p>
+<form method="post">{% csrf_token %}
+    <div class="tf-actions">
+        <button class="btn" type="submit" style="background:#dc2626; color:#fff; border-color:#dc2626;">Yes, Disable 2FA</button>
+        <a href="{% url 'two_factor:profile' %}" class="btn">Cancel</a>
+    </div>
+</form>
+{% endblock %}

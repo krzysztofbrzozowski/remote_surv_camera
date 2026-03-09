@@ -1,0 +1,18 @@
+{% extends "two_factor/_base_focus.html" %}
+{% load i18n %}
+
+{% block title %}2FA Enabled — surv_cam{% endblock %}
+
+{% block content %}
+<div style="text-align:center; margin-bottom:20px;">
+    <div style="font-size:2em; margin-bottom:8px;">✓</div>
+    <h1 style="font-size:1.3em; font-weight:600;">Two-Factor Authentication Enabled</h1>
+    <p style="color:#525252; font-size:0.9em; margin-top:8px;">
+        Your account is now protected with 2FA.
+    </p>
+</div>
+<div style="display:flex; flex-direction:column; gap:8px; margin-top:20px;">
+    <a href="{% url 'two_factor:backup_tokens' %}" class="btn" style="text-align:center;">Generate Backup Tokens</a>
+    <a href="{% url 'two_factor:profile' %}" class="btn btn-primary" style="text-align:center;">Back to Account Security</a>
+</div>
+{% endblock %}

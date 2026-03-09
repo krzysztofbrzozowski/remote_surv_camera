@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>{% block title %}{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <script>
+        /* Apply saved theme ASAP to avoid flash */
+        (function(){var t=document.cookie.replace(/(?:(?:^|.*;)\s*theme\s*=\s*([^;]*).*$)|^.*$/,'$1');
+        if(!t){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'}
+        document.documentElement.setAttribute('data-theme',t)})();
+    </script>
+    <style>
+        /* ═══ Apple-inspired CSS variables ═══ */
+        :root, [data-theme="light"] {
+            --bg: #f2f2f7;
+            --surface: #ffffff;
+            --surface-secondary: #f2f2f7;
+            --surface-hover: rgba(0,0,0,0.04);
+            --nav-bg: rgba(249,249,249,0.94);
+            --text: #000000;
+            --text-secondary: #3c3c43;
+            --text-tertiary: #8e8e93;
+            --text-quaternary: #c7c7cc;
+            --border: rgba(60,60,67,0.12);
+            --border-solid: #d1d1d6;
+            --fill: rgba(120,120,128,0.08);
+            --fill-secondary: rgba(120,120,128,0.04);
+            --accent: #007AFF;
+            --green: #34C759;
+            --red: #FF3B30;
+            --orange: #FF9500;
+            --blue: #007AFF;
+            --purple: #AF52DE;
+            --shadow: 0 1px 3px rgba(0,0,0,0.06);
+            --chart-grid: #f0f0f0;
+            --chart-avg: #8E8E93;
+            --brand-stroke: #000;
+        }
+        [data-theme="dark"] {
+            --bg: #000000;
+            --surface: #1c1c1e;
+            --surface-secondary: #2c2c2e;
+            --surface-hover: rgba(255,255,255,0.06);
+            --nav-bg: rgba(28,28,30,0.94);
+            --text: #ffffff;
+            --text-secondary: rgba(235,235,245,0.6);
+            --text-tertiary: #8e8e93;
+            --text-quaternary: #48484a;
+            --border: rgba(84,84,88,0.65);
+            --border-solid: #38383a;
+            --fill: rgba(120,120,128,0.24);
+            --fill-secondary: rgba(120,120,128,0.12);
+            --accent: #0A84FF;
+            --green: #30D158;
+            --red: #FF453A;
+            --orange: #FF9F0A;
+            --blue: #0A84FF;
+            --purple: #BF5AF2;
+            --shadow: 0 1px 3px rgba(0,0,0,0.4);
+            --chart-grid: #2c2c2e;
+            --chart-avg: #636366;
+            --brand-stroke: #fff;
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { height: 100%; -webkit-text-size-adjust: 100%; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-weight: 400;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            touch-action: manipulation;
+            transition: background .2s, color .2s;
+        }
+        a { color: inherit; text-decoration: none; transition: color 0.15s; }
+        a:hover { text-decoration: underline; }
+        strong { font-weight: 600; }
+        h1, h2, h3 { font-weight: 600; color: var(--text); margin-bottom: 12px; }
+        h1 { font-size: 1.75em; }
+        h2 { font-size: 1.25em; }
+        p { color: var(--text-secondary); line-height: 1.6; }
+
+        /* ── Navbar — desktop ── */
+        nav.navbar {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            background: var(--nav-bg);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--border);
+        }
+        nav.navbar .nav-inner {
+            max-width: 1140px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 52px;
+        }
+        nav.navbar .brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.05em;
+            font-weight: 600;
+            color: var(--text);
+            text-decoration: none;
+            letter-spacing: -0.01em;
+        }
+        nav.navbar .brand:hover { text-decoration: none; }
+        nav.navbar .brand svg { width: 28px; height: 28px; }
+        nav.navbar .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+        nav.navbar .nav-links a {
+            font-size: 0.95em;
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 4px 0;
+        }
+        nav.navbar .nav-links a:hover {
+            color: var(--text);
+            text-decoration: underline;
+            text-underline-offset: 4px;
+        }
+        nav.navbar .nav-links a.active {
+            color: var(--text);
+            font-weight: 500;
+        }
+        nav.navbar .nav-links a.nav-logout {
+            padding: 6px 16px;
+            border-radius: 9999px;
+            background: var(--fill);
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+        nav.navbar .nav-links a.nav-logout:hover {
+            background: var(--fill-secondary);
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        /* Theme toggle */
+        .theme-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 8px;
+            color: var(--text-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background .15s, color .15s;
+        }
+        .theme-toggle:hover { background: var(--fill); color: var(--text); }
+        .theme-toggle svg { width: 20px; height: 20px; }
+        [data-theme="light"] .theme-icon-light { display: none; }
+        [data-theme="dark"] .theme-icon-dark { display: none; }
+
+        /* Admin dropdown */
+        .nav-dropdown { position: relative; }
+        .nav-dropdown > a { cursor: pointer; }
+        .nav-dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 6px 0;
+            min-width: 140px;
+            box-shadow: var(--shadow);
+            z-index: 100;
+        }
+        .nav-dropdown:hover .nav-dropdown-menu,
+        .nav-dropdown:focus-within .nav-dropdown-menu { display: block; }
+        .nav-dropdown-menu a {
+            display: block;
+            padding: 8px 16px;
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            text-decoration: none;
+        }
+        .nav-dropdown-menu a:hover {
+            background: var(--surface-hover);
+            color: var(--text);
+            text-decoration: none;
+        }
+        .nav-dropdown-menu a.active { color: var(--text); font-weight: 500; }
+
+        /* ── Mobile bottom bar ── */
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 50;
+            background: var(--nav-bg);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            backdrop-filter: saturate(180%) blur(20px);
+            border-top: 1px solid var(--border);
+            padding: 6px 0;
+            padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+        }
+        .mobile-nav .mobile-nav-inner {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            position: relative;
+        }
+        .mobile-nav a, .mobile-nav button.theme-toggle-mobile {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            font-size: 0.65em;
+            color: var(--text-tertiary);
+            text-decoration: none;
+            padding: 4px 8px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .mobile-nav a.active { color: var(--accent); }
+        .mobile-nav a svg, .mobile-nav button svg { width: 22px; height: 22px; }
+
+        /* Mobile admin popup */
+        .mobile-admin-popup {
+            display: none;
+            position: absolute;
+            bottom: 100%; left: 50%; transform: translateX(-50%);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 6px 0;
+            margin-bottom: 8px;
+            min-width: 120px;
+            box-shadow: 0 -4px 16px rgba(0,0,0,0.15);
+            z-index: 60;
+        }
+        .mobile-admin-popup.open { display: block; }
+        .mobile-admin-popup a {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+        .mobile-admin-popup a.active { color: var(--accent); font-weight: 500; }
+        .mobile-admin-popup a:hover { background: var(--surface-hover); }
+        .mobile-admin-popup a svg { width: 18px; height: 18px; }
+
+        /* ── Layout ── */
+        .container { max-width: 1140px; margin: 0 auto; padding: 0 24px; }
+        main.content { padding: 40px 0 80px; flex: 1; }
+
+        /* ── Cards ── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+        .card h2 { font-size: 1.15em; margin-bottom: 16px; }
+
+        /* ── Buttons — pill style ── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 20px;
+            border: 1px solid var(--border-solid);
+            background: var(--surface);
+            color: var(--text);
+            border-radius: 9999px;
+            font-family: inherit;
+            font-size: 0.875em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-decoration: none;
+            white-space: nowrap;
+            gap: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .btn:hover { background: var(--surface-hover); border-color: var(--text-quaternary); text-decoration: none; }
+        .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .btn-primary:hover { opacity: 0.85; }
+        .btn-sm { padding: 5px 14px; font-size: 0.8em; }
+        .btn-danger { background: var(--red); border-color: var(--red); color: #fff; }
+        .btn-danger:hover { opacity: 0.85; }
+
+        /* ── Tags / Badges — pill ── */
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 16px;
+            border: 1px solid var(--border-solid);
+            border-radius: 9999px;
+            color: var(--text-secondary);
+            font-size: 0.8em;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.15s;
+            gap: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .tag:hover { background: var(--surface-hover); text-decoration: none; }
+        .tag.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+        /* ── Inputs ── */
+        input[type="text"], input[type="password"], select {
+            width: 100%;
+            padding: 10px 14px;
+            margin: 6px 0 16px;
+            background: var(--surface);
+            border: 1px solid var(--border-solid);
+            border-radius: 12px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.95em;
+        }
+        input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,122,255,0.15); }
+        label { font-size: 0.875em; color: var(--text-tertiary); font-weight: 500; }
+
+        /* ── Tables ── */
+        table { width: 100%; border-collapse: collapse; }
+        table th {
+            text-align: left;
+            padding: 10px 14px;
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-tertiary);
+            border-bottom: 1px solid var(--border);
+            font-weight: 500;
+        }
+        table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9em;
+            color: var(--text-secondary);
+        }
+        table tr:hover td { background: var(--surface-hover); }
+
+        /* ── Camera selector bar ── */
+        .camera-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .camera-bar .label { color: var(--text-tertiary); font-size: 0.85em; margin-right: 4px; }
+
+        /* ── Status dot ── */
+        .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+        .status-dot.online { background: var(--green); }
+        .status-dot.offline { background: var(--red); }
+
+        /* ── Footer ── */
+        footer {
+            margin-top: auto;
+            padding: 16px 24px;
+            text-align: center;
+            font-size: 0.75em;
+            color: var(--text-quaternary);
+        }
+
+        @media (max-width: 640px) {
+            main.content { padding: 20px 0 100px; }
+            .container { padding: 0 16px; }
+            nav.navbar { display: none; }
+            .mobile-nav { display: block; }
+            .card { padding: 16px; border-radius: 12px; }
+            footer { display: none; }
+            a, button { -webkit-tap-highlight-color: transparent; }
+            .btn { min-height: 44px; }
+            .btn-sm { min-height: 36px; }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if user.is_authenticated %}
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a class="brand" href="{% url 'live' %}">
+                <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="6" width="20" height="16" rx="3" stroke="var(--brand-stroke)" stroke-width="2.2" fill="none"/>
+                    <path d="M22 11l7-4v18l-7-4V11z" stroke="var(--brand-stroke)" stroke-width="2.2" fill="none" stroke-linejoin="round"/>
+                    <circle cx="12" cy="14" r="3" stroke="var(--brand-stroke)" stroke-width="1.8" fill="none"/>
+                    <circle cx="12" cy="14" r="1" fill="var(--brand-stroke)"/>
+                </svg>
+            </a>
+            <div class="nav-links">
+                <a href="{% url 'live' %}" {% if request.resolver_match.url_name == 'live' %}class="active"{% endif %}>Live</a>
+                <a href="{% url 'recordings' %}" {% if request.resolver_match.url_name == 'recordings' or request.resolver_match.url_name == 'recording_playback' %}class="active"{% endif %}>Recordings</a>
+                {% if user.is_staff %}
+                <div class="nav-dropdown">
+                    <a {% if request.resolver_match.url_name == 'admin_stats' or request.resolver_match.url_name == 'admin_logs' or request.resolver_match.url_name == 'admin_daily_logs' or request.resolver_match.url_name == 'admin_daily_log_file' %}class="active"{% endif %}>Admin ▾</a>
+                    <div class="nav-dropdown-menu">
+                        <a href="{% url 'admin_stats' %}" {% if request.resolver_match.url_name == 'admin_stats' %}class="active"{% endif %}>Stats</a>
+                        <a href="{% url 'admin_logs' %}" {% if request.resolver_match.url_name == 'admin_logs' %}class="active"{% endif %}>Logs</a>
+                        <a href="{% url 'admin_daily_logs' %}" {% if request.resolver_match.url_name == 'admin_daily_logs' or request.resolver_match.url_name == 'admin_daily_log_file' %}class="active"{% endif %}>Daily Logs</a>
+                    </div>
+                </div>
+                {% endif %}
+                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg class="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                    <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                </button>
+                <a href="{% url 'logout' %}" class="nav-logout">Sign out</a>
+            </div>
+        </div>
+    </nav>
+    <!-- Mobile bottom nav -->
+    <div class="mobile-nav">
+        <div class="mobile-nav-inner">
+            <a href="{% url 'live' %}" {% if request.resolver_match.url_name == 'live' %}class="active"{% endif %}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12C2 12 5 5 12 5s10 7 10 7-3 7-10 7S2 12 2 12z"/></svg>
+                Live
+            </a>
+            <a href="{% url 'recordings' %}" {% if request.resolver_match.url_name == 'recordings' or request.resolver_match.url_name == 'recording_playback' %}class="active"{% endif %}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="4"/><polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/></svg>
+                Recordings
+            </a>
+            {% if user.is_staff %}
+            <a href="#" id="mobile-admin-toggle" {% if request.resolver_match.url_name == 'admin_stats' or request.resolver_match.url_name == 'admin_logs' or request.resolver_match.url_name == 'admin_daily_logs' or request.resolver_match.url_name == 'admin_daily_log_file' %}class="active"{% endif %}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                Admin
+            </a>
+            <div id="mobile-admin-menu" class="mobile-admin-popup">
+                <a href="{% url 'admin_stats' %}" {% if request.resolver_match.url_name == 'admin_stats' %}class="active"{% endif %}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Stats
+                </a>
+                <a href="{% url 'admin_logs' %}" {% if request.resolver_match.url_name == 'admin_logs' %}class="active"{% endif %}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h12"/></svg>Logs
+                </a>
+                <a href="{% url 'admin_daily_logs' %}" {% if request.resolver_match.url_name == 'admin_daily_logs' or request.resolver_match.url_name == 'admin_daily_log_file' %}class="active"{% endif %}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Daily Logs
+                </a>
+            </div>
+            {% endif %}
+            <button class="theme-toggle-mobile" onclick="toggleTheme()">
+                <svg class="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                Theme
+            </button>
+            <a href="{% url 'logout' %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Sign out
+            </a>
+        </div>
+    </div>
+    {% endif %}
+    <main class="content">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+    <footer>© 2026</footer>
+    <script>
+    /* Theme toggle */
+    function toggleTheme(){
+        var cur=document.documentElement.getAttribute('data-theme')||'light';
+        var next=cur==='dark'?'light':'dark';
+        document.documentElement.setAttribute('data-theme',next);
+        document.cookie='theme='+next+';path=/;max-age=31536000;SameSite=Lax';
+        if(window._onThemeChange) window._onThemeChange(next);
+    }
+    /* Mobile admin popup */
+    (function() {
+        var toggle = document.getElementById('mobile-admin-toggle');
+        var menu = document.getElementById('mobile-admin-menu');
+        if (toggle && menu) {
+            toggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                menu.classList.toggle('open');
+            });
+            document.addEventListener('click', function(e) {
+                if (!menu.contains(e.target) && e.target !== toggle) {
+                    menu.classList.remove('open');
+                }
+            });
+        }
+    })();
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

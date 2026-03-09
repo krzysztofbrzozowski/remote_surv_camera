@@ -1,0 +1,50 @@
+# Byte-compiled
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+docker-data/
+
+# Django
+db.sqlite3
+server/media/
+server/staticfiles/
+
+# Recordings
+recordings/
+
+# Logs (per-component daily logs)
+server/logs/
+rpi_streamer/logs/
+
+# Token files
+.token
+.token*
+
+# Environment
+.env
+.env.local
+.env.production
+
+# macOS
+.DS_Store
+*.nosync
+
+exaples
+exaples/*
+_some_issues

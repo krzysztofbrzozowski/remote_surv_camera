@@ -1,0 +1,44 @@
+{% extends "two_factor/_base_focus.html" %}
+{% load i18n %}
+
+{% block title %}Set Up 2FA — surv_cam{% endblock %}
+{% block extra_media %}{{ form.media }}{% endblock %}
+
+{% block content %}
+<div style="text-align:center; margin-bottom:20px;">
+    <h1 style="font-size:1.3em; font-weight:600;">Set Up Two-Factor Authentication</h1>
+</div>
+
+{% if wizard.steps.current == 'welcome' %}
+    <p style="color:#525252; font-size:0.9em; line-height:1.6;">
+        Protect your admin account with two-factor authentication.
+        You'll need an authenticator app like <strong>Google Authenticator</strong>,
+        <strong>Apple Passwords</strong>, or <strong>1Password</strong>.
+    </p>
+{% elif wizard.steps.current == 'method' %}
+    <p style="color:#525252; font-size:0.9em;">Select your authentication method.</p>
+{% elif wizard.steps.current == 'generator' %}
+    <p style="color:#525252; font-size:0.9em; line-height:1.6;">
+        Scan this QR code with your authenticator app, then enter the generated code below.
+    </p>
+    <div style="text-align:center; margin:20px 0;">
+        <img src="{{ QR_URL }}" alt="QR Code" style="background:#fff; padding:8px; border:1px solid #e5e5e5; border-radius:12px;" />
+    </div>
+    <details style="margin-bottom:16px;">
+        <summary style="font-size:0.85em; color:#737373; cursor:pointer;">Can't scan? Enter manually</summary>
+        <p style="margin-top:8px; font-family:'SF Mono','Fira Code',monospace; font-size:0.85em; background:#f5f5f5; padding:10px 14px; border-radius:8px; word-break:break-all;">
+            {{ secret_key }}
+        </p>
+    </details>
+{% elif wizard.steps.current == 'validation' %}
+    <p style="color:#525252; font-size:0.9em;">Enter the verification code sent to your device.</p>
+{% elif wizard.steps.current == 'yubikey' %}
+    <p style="color:#525252; font-size:0.9em;">Insert your YubiKey and press the button.</p>
+{% endif %}
+
+<form action="" method="post">{% csrf_token %}
+    {% include "two_factor/_wizard_forms.html" %}
+    <input type="submit" value="" hidden />
+    {% include "two_factor/_wizard_actions.html" %}
+</form>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "two_factor/_base_focus.html" %}
+{% load i18n two_factor_tags %}
+
+{% block title %}Admin Sign In — surv_cam{% endblock %}
+
+{% block extra_media %}{{ form.media }}{% endblock %}
+
+{% block content %}
+<div style="text-align:center; margin-bottom:24px;">
+    <h1 style="font-size:1.3em; font-weight:600;">
+    {% if wizard.steps.current == 'auth' %}
+        Admin Sign In
+    {% elif wizard.steps.current == 'token' %}
+        Two-Factor Verification
+    {% elif wizard.steps.current == 'backup' %}
+        Backup Token
+    {% endif %}
+    </h1>
+    <p style="color:#a3a3a3; font-size:0.9em; margin-top:6px;">
+    {% if wizard.steps.current == 'auth' %}
+        Enter your credentials to access the admin panel.
+    {% elif wizard.steps.current == 'token' %}
+        Enter the code from your authenticator app.
+    {% elif wizard.steps.current == 'backup' %}
+        Enter one of your backup tokens.
+    {% endif %}
+    </p>
+</div>
+
+<form action="" method="post">{% csrf_token %}
+    {% include "two_factor/_wizard_forms.html" %}
+    <input type="submit" value="" hidden />
+
+    {% if other_devices %}
+    <div style="margin-top:12px;">
+        <p style="font-size:0.85em; color:#737373;">Or use another method:</p>
+        {% for other in other_devices %}
+        <button name="challenge_device" value="{{ other.persistent_id }}" type="submit" class="btn" style="width:100%; margin-bottom:6px;">
+            {{ other|as_action }}
+        </button>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="tf-actions" style="justify-content:center;">
+        <button type="submit" class="btn btn-primary" style="width:100%; padding:11px; border-radius:12px;">
+        {% if wizard.steps.current == 'auth' %}Sign in{% else %}Verify{% endif %}
+        </button>
+    </div>
+</form>
+
+{% if backup_tokens %}
+<div style="margin-top:16px; padding-top:16px; border-top:1px solid #e5e5e5; text-align:center;">
+    <form action="" method="post">{% csrf_token %}
+        <button name="wizard_goto_step" type="submit" value="backup" class="btn-link" style="font-size:0.85em; background:none; border:none; color:#525252; cursor:pointer;">
+            Use Backup Token
+        </button>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

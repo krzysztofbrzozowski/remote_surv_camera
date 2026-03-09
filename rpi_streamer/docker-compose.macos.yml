@@ -1,0 +1,18 @@
+# RPi Streamer — macOS camera via OpenCV
+# ⚠️  Docker Desktop for Mac CANNOT access the camera device.
+# 
+# Use the native script instead:
+#   ./start-macos-streamer.sh
+#
+# Or manually:
+#   python3 -m venv venv && source venv/bin/activate
+#   pip install -r requirements.txt
+#   STREAMER_CONFIG=configs/macos-cam.yaml python3 main.py
+
+# This compose is for reference only and will fail on macOS
+services:
+  macos-streamer:
+    build: .
+    volumes:
+      - ./configs/macos-cam.yaml:/app/config.yaml:ro
+    restart: "no"

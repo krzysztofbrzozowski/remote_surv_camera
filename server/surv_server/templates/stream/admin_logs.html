@@ -1,0 +1,205 @@
+{% extends "stream/base.html" %}
+{% block title %}Server Logs — surv_cam{% endblock %}
+
+{% block extra_css %}
+<style>
+    .log-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+    }
+    .log-controls select {
+        width: auto;
+        margin: 0;
+        padding: 6px 12px;
+        font-size: 0.85em;
+        border-radius: 8px;
+    }
+    .log-controls label {
+        margin: 0;
+        font-size: 0.85em;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .log-container {
+        background: var(--surface);
+        color: var(--text-secondary);
+        font-family: 'SF Mono', SFMono-Regular, Menlo, monospace;
+        font-size: 0.78em;
+        line-height: 1.6;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        padding: 16px;
+        height: 70vh;
+        overflow-y: auto;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+        -webkit-overflow-scrolling: touch;
+    }
+    .log-line { display: block; padding: 1px 0; }
+    .log-line:hover { background: var(--surface-hover); }
+    .log-level-ERROR, .log-level-CRITICAL { color: var(--red); }
+    .log-level-WARNING { color: var(--orange); }
+    .log-level-INFO { color: var(--text-tertiary); }
+    .log-level-DEBUG { color: var(--text-quaternary); }
+    .log-time { color: var(--text-quaternary); }
+    .log-logger { color: var(--accent); }
+    .log-count {
+        font-size: 0.85em;
+        color: var(--text-tertiary);
+        margin-left: auto;
+    }
+    .log-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85em;
+        color: var(--green);
+    }
+    .log-status .dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: var(--green);
+        animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+    }
+    @media (max-width: 640px) {
+        .log-container { height: 60vh; padding: 10px; font-size: 0.7em; }
+        .log-controls { gap: 8px; }
+        .log-controls select { padding: 8px 12px; font-size: 0.9em; }
+        .log-controls label { font-size: 0.8em; }
+        h1 { font-size: 1.2em; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Server Logs</h1>
+
+<div class="log-controls">
+    <label>Level:
+        <select id="log-level">
+            <option value="ALL">All</option>
+            <option value="DEBUG">Debug</option>
+            <option value="INFO" selected>Info</option>
+            <option value="WARNING">Warning</option>
+            <option value="ERROR">Error</option>
+        </select>
+    </label>
+    <label>
+        <input type="checkbox" id="log-autoscroll" checked> Auto-scroll
+    </label>
+    <span class="log-status"><span class="dot"></span> Live</span>
+    <span class="log-count" id="log-count">0 entries</span>
+</div>
+
+<div class="log-container" id="log-container"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    var container = document.getElementById('log-container');
+    var levelSelect = document.getElementById('log-level');
+    var autoScroll = document.getElementById('log-autoscroll');
+    var countEl = document.getElementById('log-count');
+    var lastTimestamp = 0;
+    var totalEntries = 0;
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function formatLogLine(entry) {
+        var level = entry.level || 'INFO';
+        var msg = escapeHtml(entry.msg || '');
+        return '<span class="log-line log-level-' + level + '">' + msg + '</span>';
+    }
+
+    function fetchLogs() {
+        var level = levelSelect.value;
+        var url = '/api/server-logs/?since=' + lastTimestamp;
+        if (level !== 'ALL') url += '&level=' + level;
+
+        fetch(url, { credentials: 'same-origin' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.logs || data.logs.length === 0) return;
+
+                var html = '';
+                for (var i = 0; i < data.logs.length; i++) {
+                    html += formatLogLine(data.logs[i]);
+                    if (data.logs[i].t > lastTimestamp) {
+                        lastTimestamp = data.logs[i].t;
+                    }
+                }
+                totalEntries += data.logs.length;
+                container.innerHTML += html;
+                countEl.textContent = totalEntries + ' entries';
+
+                if (autoScroll.checked) {
+                    container.scrollTop = container.scrollHeight;
+                }
+            })
+            .catch(function() {});
+    }
+
+    // Initial full fetch
+    fetch('/api/server-logs/', { credentials: 'same-origin' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.logs) return;
+            var html = '';
+            for (var i = 0; i < data.logs.length; i++) {
+                html += formatLogLine(data.logs[i]);
+                if (data.logs[i].t > lastTimestamp) {
+                    lastTimestamp = data.logs[i].t;
+                }
+            }
+            totalEntries = data.logs.length;
+            container.innerHTML = html;
+            countEl.textContent = totalEntries + ' entries';
+            if (autoScroll.checked) {
+                container.scrollTop = container.scrollHeight;
+            }
+        });
+
+    // Poll every 2 seconds
+    setInterval(fetchLogs, 2000);
+
+    // On level change, refetch all
+    levelSelect.addEventListener('change', function() {
+        container.innerHTML = '';
+        lastTimestamp = 0;
+        totalEntries = 0;
+        fetch('/api/server-logs/?level=' + this.value, { credentials: 'same-origin' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.logs) return;
+                var html = '';
+                for (var i = 0; i < data.logs.length; i++) {
+                    html += formatLogLine(data.logs[i]);
+                    if (data.logs[i].t > lastTimestamp) {
+                        lastTimestamp = data.logs[i].t;
+                    }
+                }
+                totalEntries = data.logs.length;
+                container.innerHTML = html;
+                countEl.textContent = totalEntries + ' entries';
+                if (autoScroll.checked) {
+                    container.scrollTop = container.scrollHeight;
+                }
+            });
+    });
+})();
+</script>
+{% endblock %}

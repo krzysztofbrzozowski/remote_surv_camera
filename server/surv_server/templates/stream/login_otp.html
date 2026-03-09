@@ -1,0 +1,35 @@
+{% extends "stream/base.html" %}
+{% block title %}Verify — surv_cam{% endblock %}
+
+{% block content %}
+<div style="max-width: 380px; margin: 60px auto;">
+    <div style="text-align:center; margin-bottom: 32px;">
+        <h1 style="font-size:1.5em; font-weight:600; display:flex; align-items:center; justify-content:center; gap:10px;">
+            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:32px; height:32px;">
+                <rect x="6" y="14" width="20" height="14" rx="3" stroke="var(--brand-stroke)" stroke-width="2.2" fill="none"/>
+                <path d="M10 14V10a6 6 0 1 1 12 0v4" stroke="var(--brand-stroke)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+                <circle cx="16" cy="21" r="2" fill="var(--brand-stroke)"/>
+            </svg>
+            Verification
+        </h1>
+        <p style="color:var(--text-tertiary); font-size:0.95em;">Enter the 6-digit code from your authenticator app</p>
+    </div>
+    <div class="card">
+        {% if error %}
+        <div style="background:var(--fill); border:1px solid var(--red); border-radius:12px; padding:10px 14px; margin-bottom:16px; color:var(--red); font-size:0.9em;">{{ error }}</div>
+        {% endif %}
+        <form method="post" action="{% url 'login' %}">
+            {% csrf_token %}
+            <label for="otp_token">Verification code</label>
+            <input type="text" name="otp_token" id="otp_token" autofocus required
+                   placeholder="000000" maxlength="6" pattern="[0-9]{6}"
+                   inputmode="numeric" autocomplete="one-time-code"
+                   style="text-align:center; letter-spacing:0.5em; font-size:1.3em; font-weight:600;">
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top:4px; padding:11px; font-size:0.95em; border-radius:12px;">Verify</button>
+        </form>
+        <div style="text-align:center; margin-top:16px;">
+            <a href="{% url 'login' %}?reset=1" style="font-size:0.85em; color:var(--text-tertiary);">Use a different account</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

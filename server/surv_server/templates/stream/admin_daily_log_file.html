@@ -1,0 +1,49 @@
+{% extends "stream/base.html" %}
+{% block title %}{{ filename }} ({{ date }}) — surv_cam{% endblock %}
+
+{% block extra_css %}
+<style>
+    .log-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    .log-header a {
+        font-size: 0.9em;
+        color: var(--text-secondary);
+    }
+    .log-viewer {
+        background: var(--surface);
+        color: var(--text-secondary);
+        font-family: 'SF Mono', SFMono-Regular, Menlo, monospace;
+        font-size: 0.78em;
+        line-height: 1.7;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        padding: 16px;
+        min-height: 40vh;
+        max-height: 80vh;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+        -webkit-overflow-scrolling: touch;
+    }
+    @media (max-width: 640px) {
+        .log-viewer { font-size: 0.7em; padding: 10px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="log-header">
+    <a href="{% url 'admin_daily_logs' %}">← Daily Logs</a>
+    <span style="color:var(--text-tertiary)">/</span>
+    <span style="color:var(--text-secondary)">{{ date }}</span>
+    <span style="color:var(--text-tertiary)">/</span>
+    <strong>{{ filename }}</strong>
+</div>
+
+<div class="log-viewer">{{ content }}</div>
+{% endblock %}

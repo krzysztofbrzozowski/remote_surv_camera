@@ -1,0 +1,10 @@
+# Synthetic camera 1 — generated test pattern, no camera needed
+server_url: "ws://192.168.1.101/ws/camera/feed/"
+camera_id: "synthetic-1"
+camera_source: "synthetic"
+
+frame_width: 1920
+frame_height: 1080
+fps: 30
+idle_fps: 1
+jpeg_quality: 70

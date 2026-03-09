@@ -1,0 +1,177 @@
+{% extends "stream/base.html" %}
+{% block title %}Daily Logs — surv_cam{% endblock %}
+
+{% block extra_css %}
+<style>
+    .day-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 12px;
+    }
+    .day-card h3 {
+        font-size: 1em;
+        margin-bottom: 10px;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .file-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .file-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border: 1px solid var(--border-solid);
+        border-radius: 9999px;
+        font-size: 0.85em;
+        color: var(--text-secondary);
+        text-decoration: none;
+        transition: all 0.15s;
+    }
+    .file-link:hover {
+        background: var(--surface-hover);
+        border-color: var(--text-quaternary);
+        color: var(--text);
+        text-decoration: none;
+    }
+    .file-link svg { width: 14px; height: 14px; }
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-tertiary);
+    }
+    .empty-state svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.4; }
+
+    .live-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border: 1px solid var(--border-solid);
+        border-radius: 9999px;
+        font-size: 0.78em;
+        cursor: pointer;
+        transition: all 0.15s;
+        background: var(--surface);
+        color: var(--text-tertiary);
+        font-family: inherit;
+    }
+    .live-toggle:hover { background: var(--surface-hover); }
+    .live-toggle.active { background: var(--fill); border-color: var(--green); color: var(--green); }
+    .live-toggle .dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: var(--text-tertiary);
+    }
+    .live-toggle.active .dot {
+        background: var(--green);
+        animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+    }
+    .live-log-container {
+        background: var(--surface);
+        color: var(--text-secondary);
+        font-family: 'SF Mono', SFMono-Regular, Menlo, monospace;
+        font-size: 0.75em;
+        line-height: 1.6;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        padding: 16px;
+        max-height: 50vh;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+        display: none;
+        margin-top: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Daily Logs</h1>
+<p style="color:var(--text-tertiary); margin-bottom:24px;">Server log files organized by date. Data usage is recorded every hour.</p>
+
+{% if days %}
+    {% for day in days %}
+    <div class="day-card">
+        <h3>{{ day.date }}</h3>
+        <div class="file-list">
+            {% for file in day.files %}
+            <a class="file-link" href="{% url 'admin_daily_log_file' day.date file %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                {{ file }}
+            </a>
+            {% endfor %}
+            {% for file in day.files %}
+            {% if file == 'server.log' %}
+            <button class="live-toggle" data-date="{{ day.date }}" data-file="{{ file }}" onclick="toggleLive(this)">
+                <span class="dot"></span> Live
+            </button>
+            {% endif %}
+            {% endfor %}
+        </div>
+        <div class="live-log-container" id="live-log-{{ day.date }}"></div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <p>No daily logs yet.<br>Logs are created automatically when the server runs.</p>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    var activeTimers = {};
+
+    window.toggleLive = function(btn) {
+        var date = btn.getAttribute('data-date');
+        var file = btn.getAttribute('data-file');
+        var container = document.getElementById('live-log-' + date);
+        var key = date + '/' + file;
+
+        if (btn.classList.contains('active')) {
+            btn.classList.remove('active');
+            container.style.display = 'none';
+            if (activeTimers[key]) {
+                clearInterval(activeTimers[key]);
+                delete activeTimers[key];
+            }
+            return;
+        }
+
+        btn.classList.add('active');
+        container.style.display = 'block';
+        container.textContent = 'Loading...';
+
+        function fetchLog() {
+            fetch('/admin-daily-logs/' + date + '/' + file + '/?raw=1', { credentials: 'same-origin' })
+                .then(function(r) { return r.text(); })
+                .then(function(text) {
+                    container.textContent = text;
+                    container.scrollTop = container.scrollHeight;
+                })
+                .catch(function() {
+                    container.textContent = 'Error loading log file.';
+                });
+        }
+
+        fetchLog();
+        activeTimers[key] = setInterval(fetchLog, 3000);
+    };
+})();
+</script>
+{% endblock %}

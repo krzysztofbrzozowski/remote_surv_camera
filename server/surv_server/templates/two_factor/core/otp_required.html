@@ -1,0 +1,18 @@
+{% extends "two_factor/_base_focus.html" %}
+{% load i18n %}
+
+{% block title %}2FA Required — surv_cam{% endblock %}
+
+{% block content %}
+<div style="text-align:center; margin-bottom:20px;">
+    <div style="font-size:2em; margin-bottom:8px;">🔒</div>
+    <h1 style="font-size:1.3em; font-weight:600;">Two-Factor Authentication Required</h1>
+    <p style="color:#525252; font-size:0.9em; line-height:1.6; margin-top:8px;">
+        This page requires two-factor authentication. Set up 2FA to continue.
+    </p>
+</div>
+<div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
+    <a href="{% url 'two_factor:setup' %}" class="btn btn-primary">Set Up 2FA</a>
+    <a href="javascript:history.go(-1)" class="btn">Go Back</a>
+</div>
+{% endblock %}

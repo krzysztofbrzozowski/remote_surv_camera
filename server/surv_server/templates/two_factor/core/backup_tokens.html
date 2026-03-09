@@ -1,0 +1,31 @@
+{% extends "two_factor/_base_focus.html" %}
+{% load i18n %}
+
+{% block title %}Backup Tokens — surv_cam{% endblock %}
+
+{% block content %}
+<h1 style="font-size:1.3em; font-weight:600; margin-bottom:12px;">Backup Tokens</h1>
+<p style="color:#525252; font-size:0.9em; line-height:1.6; margin-bottom:16px;">
+    Use these tokens if you lose access to your authenticator app. Each token can be used once. Store them securely.
+</p>
+
+{% if device.token_set.count %}
+<div class="tf-form">
+    <ul>
+        {% for token in device.token_set.all %}
+        <li>{{ token.token }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% else %}
+<p style="color:#a3a3a3; font-size:0.9em;">No backup tokens generated yet.</p>
+{% endif %}
+
+<form method="post" style="margin-top:20px;">{% csrf_token %}
+    {{ form.as_p }}
+    <div style="display:flex; gap:10px; margin-top:16px;">
+        <button class="btn btn-primary" type="submit">Generate New Tokens</button>
+        <a href="{% url 'two_factor:profile' %}" class="btn">Back</a>
+    </div>
+</form>
+{% endblock %}

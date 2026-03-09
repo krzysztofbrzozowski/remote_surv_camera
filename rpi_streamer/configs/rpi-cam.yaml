@@ -1,0 +1,21 @@
+# RPi Regular Camera — H.264 hardware encoding + motion detection
+# Uses create_video_configuration() + H264Encoder for efficient streaming
+# Dynamic FPS: 1 FPS idle → 25 FPS on motion
+server_url: "ws://192.168.1.100/ws/camera/feed/"
+camera_id: "rpi-cam"
+camera_source: "rpi"
+
+frame_width: 1920
+frame_height: 1080
+fps: 25             # FPS when motion detected
+idle_fps: 1         # FPS when idle (1 = minimum bandwidth)
+jpeg_quality: 70    # Only used by JPEG sources (synthetic / macOS)
+h264_bitrate: 1000000  # 1 Mbps target bitrate for H.264 (good for 1080p surveillance)
+
+# Rotate camera if physically mounted at an angle (0, 90, 180, 270)
+camera_rotation: 180
+
+# Optional: Motion detection tuning
+# motion_threshold: 25      # Pixel difference threshold (default: 25)
+# min_motion_area: 500      # Minimum changed pixels for motion (default: 500)
+# detection_cooldown: 3.0   # Seconds to stay at high FPS after motion stops (default: 3.0)

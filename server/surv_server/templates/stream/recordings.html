@@ -1,0 +1,235 @@
+{% extends "stream/base.html" %}
+{% block title %}Recordings — surv_cam{% endblock %}
+
+{% block extra_css %}
+<style>
+    .rec-actions { display: flex; gap: 6px; align-items: center; }
+    .rec-action-btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 36px; height: 36px;
+        border: 1px solid var(--border-solid); background: var(--surface);
+        border-radius: 50%; cursor: pointer;
+        transition: all 0.15s; color: var(--text-secondary);
+        text-decoration: none;
+    }
+    .rec-action-btn:hover { background: var(--surface-hover); border-color: var(--text-quaternary); color: var(--text); text-decoration: none; }
+    .rec-action-btn svg { width: 16px; height: 16px; }
+    .rec-action-btn.delete-btn { color: var(--red); border-color: var(--red); opacity: 0.8; }
+    .rec-action-btn.delete-btn:hover { opacity: 1; background: var(--surface-hover); }
+
+    /* Mobile card layout */
+    .rec-card-list { display: none; }
+    .rec-card-item {
+        background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+        padding: 14px 16px; margin-bottom: 10px;
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .rec-card-info { flex: 1; min-width: 0; }
+    .rec-card-name {
+        font-weight: 600; font-size: 0.9em; color: var(--text);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .rec-card-meta {
+        font-size: 0.78em; color: var(--text-tertiary); margin-top: 4px;
+        display: flex; flex-wrap: wrap; gap: 4px 12px;
+    }
+
+    @media (max-width: 640px) {
+        .rec-table-wrap { display: none; }
+        .rec-card-list { display: block; }
+        .rec-action-btn { width: 44px; height: 44px; }
+        .rec-action-btn svg { width: 20px; height: 20px; }
+        .camera-bar .tag { font-size: 0.7em; padding: 4px 10px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="camera-bar">
+    <span class="label">Filter by camera:</span>
+    <a href="{% url 'recordings' %}" class="tag {% if not selected_camera %}active{% endif %}">all</a>
+    {% for cam in cameras %}
+    <a href="{% url 'recordings' %}?camera={{ cam.camera_id }}"
+       class="tag {% if cam.camera_id == selected_camera %}active{% endif %}">
+        <span class="status-dot {% if cam.is_online %}online{% else %}offline{% endif %}"></span>
+        {{ cam.name|default:cam.camera_id }}
+    </a>
+    {% endfor %}
+</div>
+
+<div class="card">
+    <h2 style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+        Recordings
+        {% if recordings %}
+        <div style="display:flex; gap:8px; align-items:center;">
+            <button class="btn btn-sm" id="download-all-btn" onclick="downloadAll()">↓ Download all</button>
+            {% if user.is_superuser %}
+            <button class="btn btn-sm" style="color:var(--red); border-color:var(--red);" onclick="deleteAll()">✕ Delete all</button>
+            {% endif %}
+        </div>
+        {% endif %}
+    </h2>
+    <div id="download-status" style="display:none; margin-bottom:12px; font-size:0.85em; color:var(--text-tertiary);"></div>
+    {% if recordings %}
+    <div class="rec-table-wrap" style="overflow-x:auto;">
+    <table class="rec-table">
+        <thead>
+            <tr>
+                <th>Camera</th>
+                <th>Filename</th>
+                <th>Started</th>
+                <th>Ended</th>
+                <th>Size</th>
+                <th>Frames</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rec in recordings %}
+            <tr id="rec-{{ rec.filename }}">
+                <td data-label="Camera"><span class="tag" style="font-size:0.7em;">{{ rec.camera.name|default:rec.camera.camera_id }}</span></td>
+                <td data-label="File" style="font-family:monospace; font-size:0.85em;">{{ rec.filename }}</td>
+                <td data-label="Started">{{ rec.started_at|date:"Y-m-d H:i:s" }}</td>
+                <td data-label="Ended">{{ rec.ended_at|date:"Y-m-d H:i:s"|default:"recording..." }}</td>
+                <td data-label="Size">{{ rec.size_mb }} MB</td>
+                <td data-label="Frames">{{ rec.frame_count }}</td>
+                <td class="rec-actions-cell" style="white-space:nowrap;">
+                    <div class="rec-actions">
+                        <a href="{% url 'recording_playback' rec.filename %}" class="rec-action-btn" title="Play">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        </a>
+                        <a href="{% if rec.filename|slice:'-5:' == '.h264' %}{% url 'recording_h264_mp4' rec.filename %}?download=1{% else %}{% url 'recording_download_file' rec.filename %}{% endif %}" class="rec-action-btn" title="Download" download>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        </a>
+                        {% if user.is_superuser %}
+                        <button class="rec-action-btn delete-btn" title="Delete"
+                                onclick="deleteRecording('{{ rec.filename }}')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+
+    {# Mobile card layout #}
+    <div class="rec-card-list">
+        {% for rec in recordings %}
+        <div class="rec-card-item" id="rec-m-{{ rec.filename }}">
+            <div class="rec-card-info">
+                <div class="rec-card-name">{{ rec.camera.name|default:rec.camera.camera_id }}</div>
+                <div class="rec-card-meta">
+                    <span>{{ rec.started_at|date:"m/d H:i" }}</span>
+                    <span>{{ rec.size_mb }} MB</span>
+                    <span>{{ rec.frame_count }} frames</span>
+                </div>
+            </div>
+            <div class="rec-actions">
+                <a href="{% url 'recording_playback' rec.filename %}" class="rec-action-btn" title="Play">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                </a>
+                <a href="{% if rec.filename|slice:'-5:' == '.h264' %}{% url 'recording_h264_mp4' rec.filename %}?download=1{% else %}{% url 'recording_download_file' rec.filename %}{% endif %}" class="rec-action-btn" title="Download" download>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </a>
+                {% if user.is_superuser %}
+                <button class="rec-action-btn delete-btn" title="Delete"
+                        onclick="deleteRecording('{{ rec.filename }}')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="padding: 20px 0; color: var(--text-tertiary);">No recordings yet. Connect a camera to start recording.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    var downloadUrls = [
+        {% for rec in recordings %}
+        "{% if rec.filename|slice:'-5:' == '.h264' %}{% url 'recording_h264_mp4' rec.filename %}?download=1{% else %}{% url 'recording_download_file' rec.filename %}{% endif %}",
+        {% endfor %}
+    ];
+    var downloadNames = [
+        {% for rec in recordings %}
+        "{% if rec.filename|slice:'-5:' == '.h264' %}{{ rec.filename|cut:'.h264' }}.mp4{% else %}{{ rec.filename }}{% endif %}",
+        {% endfor %}
+    ];
+
+    window.deleteRecording = function(filename) {
+        if (!confirm('Delete recording "' + filename + '"? This cannot be undone.')) return;
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/recordings/' + filename + '/delete/';
+        var csrf = document.createElement('input');
+        csrf.type = 'hidden';
+        csrf.name = 'csrfmiddlewaretoken';
+        csrf.value = '{{ csrf_token }}';
+        form.appendChild(csrf);
+        document.body.appendChild(form);
+        form.submit();
+    };
+
+    window.deleteAll = function() {
+        var count = downloadUrls.length;
+        if (!confirm('Delete ALL ' + count + ' recordings? This cannot be undone.')) return;
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{% url "recording_delete_all" %}';
+        var csrf = document.createElement('input');
+        csrf.type = 'hidden';
+        csrf.name = 'csrfmiddlewaretoken';
+        csrf.value = '{{ csrf_token }}';
+        form.appendChild(csrf);
+        {% if selected_camera %}
+        var cam = document.createElement('input');
+        cam.type = 'hidden';
+        cam.name = 'camera';
+        cam.value = '{{ selected_camera }}';
+        form.appendChild(cam);
+        {% endif %}
+        document.body.appendChild(form);
+        form.submit();
+    };
+
+    window.downloadAll = function() {
+        var statusEl = document.getElementById('download-status');
+        var btn = document.getElementById('download-all-btn');
+        var total = downloadUrls.length;
+        if (total === 0) return;
+
+        btn.disabled = true;
+        btn.textContent = 'downloading...';
+        statusEl.style.display = 'block';
+        var current = 0;
+
+        function next() {
+            if (current >= total) {
+                statusEl.textContent = 'All ' + total + ' files downloaded.';
+                btn.disabled = false;
+                btn.textContent = '⬇ download all';
+                return;
+            }
+            statusEl.textContent = 'Downloading ' + (current + 1) + ' / ' + total + ': ' + downloadNames[current];
+            var a = document.createElement('a');
+            a.href = downloadUrls[current];
+            a.download = downloadNames[current];
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            current++;
+            setTimeout(next, 800);
+        }
+        next();
+    };
+})();
+</script>
+{% endblock %}

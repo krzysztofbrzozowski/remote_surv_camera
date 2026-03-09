@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>400 — Bad Request</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #fff;
+            color: #171717;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .error-wrap { text-align: center; }
+        .error-code { font-size: 5em; font-weight: 500; letter-spacing: -0.04em; color: #e5e5e5; }
+        .error-msg { font-size: 1.1em; color: #737373; margin-top: 8px; }
+        .error-link { display: inline-block; margin-top: 28px; font-size: 0.9em; color: #525252; text-decoration: underline; text-underline-offset: 4px; }
+        .error-link:hover { color: #171717; }
+    </style>
+</head>
+<body>
+    <div class="error-wrap">
+        <div class="error-code">400</div>
+        <div class="error-msg">bad request</div>
+        <a class="error-link" href="/">go back</a>
+    </div>
+</body>
+</html>

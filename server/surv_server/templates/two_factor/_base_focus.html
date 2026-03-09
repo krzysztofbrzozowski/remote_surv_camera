@@ -1,0 +1,9 @@
+{% extends "two_factor/_base.html" %}
+
+{% block tf_content %}
+<div style="max-width:440px; margin:40px auto;">
+    <div class="card">
+        {% block content %}{% endblock %}
+    </div>
+</div>
+{% endblock %}

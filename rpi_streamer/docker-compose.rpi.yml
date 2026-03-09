@@ -1,0 +1,13 @@
+# RPi Streamer — Raspberry Pi camera via picamera2
+# Usage:
+#   1. Edit configs/rpi-cam.yaml (set server_url to your VPS)
+#   2. docker compose -f docker-compose.rpi.yml up --build -d
+
+services:
+  rpi-streamer:
+    build: .
+    volumes:
+      - ./configs/rpi-cam.yaml:/app/config.yaml:ro
+    devices:
+      - /dev/video0:/dev/video0
+    restart: unless-stopped

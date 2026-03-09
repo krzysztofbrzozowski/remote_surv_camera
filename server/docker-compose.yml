@@ -1,0 +1,48 @@
+# Server docker-compose — default (network mode)
+# WebRTC + nginx with network_mode:host for LAN development.
+# Usage: cd server && docker compose up --build
+#        or: ./manage.sh start network
+#
+# nginx listens on port 80, daphne on 8000.
+# Auto-creates admin user (admin/admin) on first start.
+
+services:
+  redis:
+    image: redis:7-alpine
+    network_mode: host
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  server:
+    build: .
+    network_mode: host
+    environment:
+      - DJANGO_DEBUG=true
+      - DJANGO_SECRET_KEY=local-dev-only-not-for-production-change-me
+      - DJANGO_ALLOWED_HOSTS=*
+      - REDIS_URL=redis://127.0.0.1:6379/0
+      - RECORDINGS_DIR=/app/recordings
+      - RECORDING_CHUNK_SIZE_MB=100
+      - STUN_SERVER=${STUN_SERVER:-}
+    volumes:
+      - recordings_data:/app/recordings
+      - static_data:/app/staticfiles
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:alpine
+    network_mode: host
+    volumes:
+      - ./nginx-host.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_data:/app/staticfiles:ro
+    depends_on:
+      - server
+
+volumes:
+  recordings_data:
+  static_data:

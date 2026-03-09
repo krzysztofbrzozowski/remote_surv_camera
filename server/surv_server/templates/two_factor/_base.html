@@ -1,0 +1,49 @@
+{% extends "stream/base.html" %}
+{% block extra_css %}
+<style>
+    .tf-form table { width: 100%; border-collapse: collapse; border: none; }
+    .tf-form table th, .tf-form table td { border: none; padding: 4px 0; }
+    .tf-form table th { text-align: left; padding-bottom: 2px; }
+    .tf-form table th label { font-size: 0.875em; color: #737373; font-weight: 500; }
+    .tf-form table td { padding-bottom: 12px; }
+    .tf-form input[type="text"],
+    .tf-form input[type="password"],
+    .tf-form input[type="number"],
+    .tf-form select {
+        width: 100%;
+        padding: 10px 14px;
+        margin: 4px 0 0;
+        background: #fff;
+        border: 1px solid #e5e5e5;
+        border-radius: 12px;
+        color: #171717;
+        font-family: inherit;
+        font-size: 0.95em;
+    }
+    .tf-form input:focus, .tf-form select:focus {
+        outline: none; border-color: #a3a3a3;
+        box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+    }
+    .tf-form .helptext, .tf-form .help { font-size: 0.8em; color: #a3a3a3; margin-top: 4px; }
+    .tf-form .errorlist { list-style: none; padding: 0; margin: 4px 0 0; }
+    .tf-form .errorlist li {
+        background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;
+        padding: 8px 12px; color: #dc2626; font-size: 0.85em; margin-bottom: 4px;
+    }
+    .tf-actions { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+    .tf-actions .btn { border-radius: 12px; padding: 10px 20px; font-size: 0.95em; }
+    .tf-actions .btn-link { background: none; border: none; color: #525252; cursor: pointer; }
+    .tf-actions .btn-link:hover { color: #171717; }
+    .tf-form img { border-radius: 12px; background: #fff; padding: 8px; border: 1px solid #e5e5e5; }
+    .tf-form ul:not(.errorlist) { padding-left: 0; list-style: none; }
+    .tf-form ul:not(.errorlist) li {
+        display: inline-block; background: #f5f5f5; border: 1px solid #e5e5e5;
+        border-radius: 8px; padding: 6px 14px; margin: 3px 4px 3px 0;
+        font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% block tf_content %}{% endblock %}
+{% endblock %}

@@ -1,0 +1,11 @@
+# Synthetic camera — generated test pattern, works anywhere
+# Use host.docker.internal when server runs in separate Docker compose
+server_url: "ws://localhost/ws/camera/feed/"
+camera_id: "synthetic-cam"
+camera_source: "synthetic"
+
+frame_width: 1920  # 1080 resolution
+frame_height: 1080
+fps: 30
+idle_fps: 1
+jpeg_quality: 70

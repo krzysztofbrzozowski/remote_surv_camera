@@ -1,0 +1,19 @@
+# macOS Camera — H.264 encoding via ffmpeg VideoToolbox
+# Mirrors RPi architecture: OpenCV capture → H.264 encode → chunked stream
+# Dynamic FPS: 1 FPS idle → 25 FPS on motion
+server_url: "ws://localhost:8080/ws/camera/feed/"
+camera_id: "macos_h264"
+camera_source: "macos_h264"
+
+frame_width: 1920
+frame_height: 1080
+fps: 25             # FPS when motion detected
+idle_fps: 1         # FPS when idle
+h264_bitrate: 4000000  # 4 Mbps target bitrate
+
+camera_rotation: 0
+
+# Motion detection tuning
+# motion_threshold: 25
+# min_motion_area: 500
+# detection_cooldown: 3.0

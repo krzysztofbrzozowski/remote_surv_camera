@@ -1,0 +1,833 @@
+{% extends "stream/base.html" %}
+{% block title %}Live — surv_cam{% endblock %}
+
+{% block extra_css %}
+<style>
+    .video-wrapper {
+        position: relative;
+        background: #000;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        max-width: 960px;
+    }
+    .video-wrapper img, .video-wrapper video {
+        width: 100%; display: block; min-height: 120px; object-fit: contain; background: #000;
+    }
+    .video-wrapper.css-fullscreen {
+        position: fixed !important; top:0;left:0;right:0;bottom:0;
+        width:100vw!important; height:100vh!important; max-width:none!important;
+        z-index:9999; border-radius:0!important; border:none!important; background:#000; margin:0;
+    }
+    .video-wrapper.css-fullscreen img, .video-wrapper.css-fullscreen video { width:100%; height:100%; object-fit:contain; }
+    .video-wrapper.css-fullscreen .fullscreen-btn { position:fixed; bottom:20px; right:20px; z-index:10000; }
+    .fullscreen-btn {
+        position:absolute; bottom:12px; right:12px; width:36px; height:36px;
+        background:rgba(0,0,0,0.55); border:none; border-radius:8px; color:#fff;
+        cursor:pointer; display:flex; align-items:center; justify-content:center;
+        transition:background .15s; z-index:5;
+    }
+    .fullscreen-btn:hover { background:rgba(0,0,0,0.8); }
+    .fullscreen-btn svg { width:20px; height:20px; }
+
+    /* Meta grid */
+    .meta-grid {
+        max-width:960px; margin-top:10px; display:grid;
+        grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+        gap:1px; background:var(--border-solid); border:1px solid var(--border);
+        border-radius:12px; overflow:hidden;
+    }
+    .meta-cell {
+        background:var(--surface); padding:8px 10px; text-align:center;
+    }
+    .meta-cell .label {
+        display:block; font-size:.6em; text-transform:uppercase;
+        letter-spacing:.08em; color:var(--text-tertiary); margin-bottom:2px;
+    }
+    .meta-cell .value { font-size:.82em; color:var(--text); font-weight:500; }
+
+    /* Charts row — side by side */
+    .charts-row {
+        max-width:960px; margin-top:10px; display:grid;
+        grid-template-columns:1fr 1fr; gap:10px;
+    }
+    .chart-card {
+        background:var(--surface); border:1px solid var(--border);
+        border-radius:12px; padding:12px 14px;
+    }
+    .chart-card .label {
+        display:block; font-size:.6em; text-transform:uppercase;
+        letter-spacing:.08em; color:var(--text-tertiary); margin-bottom:2px;
+    }
+    .chart-card .chart-total {
+        font-size:.82em; font-weight:600; color:var(--text); margin-left:6px;
+    }
+
+    /* Connection status */
+    #connection-status {
+        padding:8px 16px; border-radius:9999px; margin-bottom:16px;
+        font-size:.85em; border:1px solid var(--border); display:inline-block;
+    }
+    .status-connected { background:rgba(52,199,89,0.1); border-color:rgba(52,199,89,0.3); color:var(--green); }
+    .status-disconnected { background:rgba(255,59,48,0.1); border-color:rgba(255,59,48,0.3); color:var(--red); }
+    .status-connecting { background:rgba(255,149,0,0.1); border-color:rgba(255,149,0,0.3); color:var(--orange); }
+
+    /* Motion — Apple SF style */
+    .motion-detected { color:var(--red); font-weight:600; }
+    .motion-idle { color:var(--green); font-weight:500; }
+    .motion-icon { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:4px; vertical-align:middle; }
+    .motion-icon.active { background:var(--red); box-shadow:0 0 6px var(--red); animation:motion-pulse 1.2s infinite; }
+    .motion-icon.idle { background:var(--green); }
+    @keyframes motion-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(1.15)} }
+
+    @media (max-width:640px) {
+        .meta-grid { grid-template-columns:repeat(3,1fr); }
+        .meta-cell { padding:6px 8px; }
+        .meta-cell .label { font-size:.55em; }
+        .meta-cell .value { font-size:.72em; }
+        .charts-row { grid-template-columns:1fr; }
+        .camera-bar { gap:6px; }
+        .camera-bar .tag { font-size:.7em; padding:4px 10px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="camera-bar">
+    <span class="label">camera:</span>
+    {% for cam in cameras %}
+    <a href="#" class="tag camera-select {% if cam.camera_id == selected_camera %}active{% endif %}"
+       data-camera-id="{{ cam.camera_id }}"
+       onclick="switchCamera('{{ cam.camera_id }}', this); return false;">
+        <span class="status-dot {% if cam.is_online %}online{% else %}offline{% endif %}"></span>
+        {{ cam.name|default:cam.camera_id }}
+    </a>
+    {% empty %}
+    <span class="tag">no cameras registered</span>
+    {% endfor %}
+</div>
+
+<div id="connection-status" class="status-connecting">connecting...</div>
+
+<div class="video-wrapper" id="video-wrapper">
+    <img id="video-feed" alt="Camera Feed"
+         src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+    <video id="video-h264" autoplay muted playsinline style="display:none;"></video>
+    <button class="fullscreen-btn" id="fullscreen-btn" title="Fullscreen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+        </svg>
+    </button>
+</div>
+
+<div class="meta-grid">
+    <div class="meta-cell">
+        <span class="label">Bitrate</span>
+        <span class="value" id="meta-bitrate">—</span>
+    </div>
+    <div class="meta-cell">
+        <span class="label">Send Rate</span>
+        <span class="value" id="meta-sendrate">—</span>
+        <span class="value" id="meta-sendrate-mh" style="font-size:0.75em; color:var(--text-tertiary);">—</span>
+    </div>
+    <div class="meta-cell">
+        <span class="label">Timestamp</span>
+        <span class="value" id="meta-timestamp">—</span>
+    </div>
+    <div class="meta-cell">
+        <span class="label">WiFi</span>
+        <span class="value" id="meta-wifi">—</span>
+    </div>
+    <div class="meta-cell">
+        <span class="label">Load Voltage</span>
+        <span class="value" id="meta-voltage">—</span>
+    </div>
+    <div class="meta-cell">
+        <span class="label">CPU Usage</span>
+        <span class="value" id="meta-cpu">—</span>
+    </div>
+    <div class="meta-cell">
+        <span class="label">Resolution</span>
+        <span class="value" id="meta-resolution">—</span>
+    </div>
+    <div class="meta-cell">
+        <span class="label">FPS</span>
+        <span class="value" id="meta-fps">—</span>
+    </div>
+    <div class="meta-cell">
+        <span class="label">Color Space</span>
+        <span class="value" id="meta-color">—</span>
+    </div>
+    <div class="meta-cell" id="meta-motion-wrap" style="display:none;">
+        <span class="label">Motion</span>
+        <span class="value" id="meta-motion">—</span>
+    </div>
+    <div class="meta-cell" id="meta-power-current-wrap" style="display:none;">
+        <span class="label">Current</span>
+        <span class="value" id="meta-power-current">—</span>
+    </div>
+    <div class="meta-cell" id="meta-power-watts-wrap" style="display:none;">
+        <span class="label">Power</span>
+        <span class="value" id="meta-power-watts">—</span>
+    </div>
+    <div class="meta-cell" id="meta-battery-wrap" style="display:none;">
+        <span class="label">Battery %</span>
+        <span class="value" id="meta-battery">—</span>
+    </div>
+</div>
+
+<!-- Charts — side by side -->
+<div class="charts-row">
+    <div class="chart-card">
+        <span class="label">Total Sent — 12H <span class="chart-total" id="meta-totalsent-val">—</span></span>
+        <div style="height:70px;"><canvas id="chart-totalsent"></canvas></div>
+    </div>
+    <div class="chart-card">
+        <span class="label">Frames — 12H <span class="chart-total" id="meta-frames-val">—</span></span>
+        <div style="height:70px;"><canvas id="chart-frames"></canvas></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% load static %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    /* ── 12-hour bar charts for Total Sent & Frames ── */
+    var _sentChart = null, _framesChart = null;
+
+    function _getChartColors() {
+        var s = getComputedStyle(document.documentElement);
+        return {
+            green: s.getPropertyValue('--green').trim() || '#34C759',
+            orange: s.getPropertyValue('--orange').trim() || '#FF9500',
+            text: s.getPropertyValue('--text-tertiary').trim() || '#8e8e93',
+            grid: s.getPropertyValue('--chart-grid').trim() || '#f0f0f0',
+            tooltip: s.getPropertyValue('--surface').trim() || '#1c1c1e',
+            tooltipText: s.getPropertyValue('--text').trim() || '#fff',
+        };
+    }
+
+    function _initCharts() {
+        var c = _getChartColors();
+        var commonOpts = {
+            responsive: true, maintainAspectRatio: false, animation: {duration: 200},
+            scales: {
+                x: {ticks: {font: {size: 8, weight: '600'}, color: c.text, maxRotation: 0}, grid: {display: false}},
+                y: {beginAtZero: true, ticks: {font: {size: 7}, color: c.text, maxTicksLimit: 3}, grid: {color: c.grid}}
+            },
+            plugins: {legend: {display: false}, tooltip: {backgroundColor: c.tooltip, titleColor: c.tooltipText, bodyColor: c.tooltipText, titleFont: {size: 9}, bodyFont: {size: 9}, padding: 6, cornerRadius: 4}}
+        };
+        var sentCtx = document.getElementById('chart-totalsent');
+        if (sentCtx) {
+            _sentChart = new Chart(sentCtx.getContext('2d'), {
+                type: 'bar',
+                data: {labels: [], datasets: [{data: [], backgroundColor: c.green, borderRadius: 2, barPercentage: 0.7}]},
+                options: Object.assign({}, commonOpts, {
+                    scales: Object.assign({}, commonOpts.scales, {
+                        y: Object.assign({}, commonOpts.scales.y, {ticks: Object.assign({}, commonOpts.scales.y.ticks, {callback: function(v){return v.toFixed(0)+' MB'}})})
+                    }),
+                    plugins: Object.assign({}, commonOpts.plugins, {
+                        tooltip: Object.assign({}, commonOpts.plugins.tooltip, {callbacks: {label: function(ctx){return ctx.raw.toFixed(2)+' MB'}}})
+                    })
+                })
+            });
+        }
+        var framesCtx = document.getElementById('chart-frames');
+        if (framesCtx) {
+            _framesChart = new Chart(framesCtx.getContext('2d'), {
+                type: 'bar',
+                data: {labels: [], datasets: [{data: [], backgroundColor: c.orange, borderRadius: 2, barPercentage: 0.7}]},
+                options: Object.assign({}, commonOpts, {
+                    plugins: Object.assign({}, commonOpts.plugins, {
+                        tooltip: Object.assign({}, commonOpts.plugins.tooltip, {callbacks: {label: function(ctx){return ctx.raw.toLocaleString()+' frames'}}})
+                    })
+                })
+            });
+        }
+    }
+    _initCharts();
+
+    /* Re-create charts on theme change */
+    window._onThemeChange = function() {
+        if (_sentChart) _sentChart.destroy();
+        if (_framesChart) _framesChart.destroy();
+        _initCharts();
+    };
+
+    function _updateCharts(m) {
+        if (m.bytes_hourly_12 && _sentChart) {
+            _sentChart.data.labels = m.hourly_labels_12 || [];
+            _sentChart.data.datasets[0].data = m.bytes_hourly_12;
+            _sentChart.update();
+        }
+        if (m.frames_hourly_12 && _framesChart) {
+            _framesChart.data.labels = m.hourly_labels_12 || [];
+            _framesChart.data.datasets[0].data = m.frames_hourly_12;
+            _framesChart.update();
+        }
+        if (m.total_mb_sent !== undefined) {
+            var v = m.total_mb_sent || 0;
+            document.getElementById('meta-totalsent-val').textContent = v >= 1024 ? (v/1024).toFixed(2)+' GB' : v.toFixed(2)+' MB';
+        }
+        if (m.frame_count !== undefined) {
+            document.getElementById('meta-frames-val').textContent = (m.frame_count || 0).toLocaleString();
+        }
+    }
+    var statusEl = document.getElementById('connection-status');
+    var videoEl = document.getElementById('video-feed');
+    var h264El = document.getElementById('video-h264');
+    var ws = null;
+    var currentCamera = '{{ selected_camera|default:"cam-1" }}';
+    var sessionKey = '{{ session_key }}';
+    var connectTimeout = null;
+    var reconnectTimer = null;
+    var connecting = false;
+    var currentEncoding = 'jpeg';
+    var currentDisplayRotation = 0;
+    var streamFps = 1;
+    var isSwitching = false;
+    var switchTimeout = null;
+    var pc = null; // RTCPeerConnection
+    var webrtcReconnectTimer = null;
+    var _webrtcPending = false; // guard against duplicate startWebRTC calls
+
+    // --- WebSocket activity monitor ---
+    var _lastWsMessageTime = 0;
+    var _wsActivityTimer = null;
+
+    function _startWsActivityMonitor() {
+        _stopWsActivityMonitor();
+        _lastWsMessageTime = Date.now();
+        _wsActivityTimer = setInterval(function() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            // When WebRTC is active, WS only carries metadata — use longer timeout
+            var timeout = (pc && pc.connectionState === 'connected') ? 30000 : 8000;
+            if (Date.now() - _lastWsMessageTime > timeout) {
+                _stopWsActivityMonitor();
+                ws.close();
+            }
+        }, 3000);
+    }
+
+    function _stopWsActivityMonitor() {
+        if (_wsActivityTimer) { clearInterval(_wsActivityTimer); _wsActivityTimer = null; }
+    }
+
+    // --- WebRTC ---
+    var _videoStallTimer = null;
+    var _lastDecodedFrames = 0;
+
+    var _stallCheckCount = 0;
+
+    function _startVideoStallDetector() {
+        _stopVideoStallDetector();
+        _lastDecodedFrames = 0;
+        _stallCheckCount = 0;
+        _videoStallTimer = setInterval(function() {
+            if (!pc || pc.connectionState !== 'connected') return;
+            _stallCheckCount++;
+            pc.getStats().then(function(stats) {
+                stats.forEach(function(report) {
+                    if (report.type === 'inbound-rtp' && report.kind === 'video') {
+                        var decoded = report.framesDecoded || 0;
+                        var stalled = false;
+                        if (_lastDecodedFrames > 0 && decoded === _lastDecodedFrames) {
+                            stalled = true; // was decoding, now stopped
+                        } else if (decoded === 0 && _stallCheckCount >= 3) {
+                            stalled = true; // never decoded any frames after 30s
+                        }
+                        if (stalled) {
+                            console.warn('Video stall detected (frames=' + decoded + '), reconnecting WebRTC');
+                            if (ws && ws.readyState === WebSocket.OPEN) {
+                                startWebRTC();
+                            }
+                        }
+                        _lastDecodedFrames = decoded;
+                    }
+                });
+            }).catch(function(){});
+        }, 10000);
+    }
+
+    function _stopVideoStallDetector() {
+        if (_videoStallTimer) { clearInterval(_videoStallTimer); _videoStallTimer = null; }
+        _lastDecodedFrames = 0;
+        _stallCheckCount = 0;
+    }
+
+    function createPeerConnection() {
+        if (pc) { pc.close(); pc = null; }
+        _stopVideoStallDetector();
+        pc = new RTCPeerConnection({
+            iceServers: {{ ice_servers_json|safe }}
+        });
+        pc.addTransceiver('video', { direction: 'recvonly' });
+
+        pc.ontrack = function(event) {
+            // aiortc addTrack() may not associate a MediaStream,
+            // so event.streams can be empty — wrap track manually.
+            var stream = event.streams[0] || new MediaStream([event.track]);
+            h264El.srcObject = stream;
+            h264El.style.display = 'block';
+            videoEl.style.display = 'none';
+            h264El.play().catch(function(){});
+        };
+
+        pc.onconnectionstatechange = function() {
+            var state = pc.connectionState;
+            if (webrtcReconnectTimer) { clearTimeout(webrtcReconnectTimer); webrtcReconnectTimer = null; }
+            if (state === 'connected') {
+                statusEl.className = 'status-connected';
+                statusEl.textContent = '● connected (WebRTC) — ' + currentCamera;
+                _startVideoStallDetector();
+            } else if (state === 'failed') {
+                _stopVideoStallDetector();
+                // ICE failed — re-negotiate immediately
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    startWebRTC();
+                }
+            } else if (state === 'disconnected') {
+                _stopVideoStallDetector();
+                // Transient — wait before reconnecting (may self-recover)
+                webrtcReconnectTimer = setTimeout(function() {
+                    if (pc && pc.connectionState === 'disconnected' && ws && ws.readyState === WebSocket.OPEN) {
+                        startWebRTC();
+                    }
+                }, 5000);
+            } else if (state === 'closed') {
+                _stopVideoStallDetector();
+                // PC closed unexpectedly — reconnect WebRTC after short delay
+                if (ws && ws.readyState === WebSocket.OPEN && !_webrtcPending) {
+                    webrtcReconnectTimer = setTimeout(function() {
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            startWebRTC();
+                        }
+                    }, 1000);
+                }
+            }
+        };
+
+        return pc;
+    }
+
+    async function startWebRTC() {
+        if (_webrtcPending) return;
+        _webrtcPending = true;
+        try {
+            createPeerConnection();
+            var offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            // Wait for ICE gathering to complete
+            if (pc.iceGatheringState !== 'complete') {
+                await new Promise(function(resolve) {
+                    var check = function() {
+                        if (pc && pc.iceGatheringState === 'complete') resolve();
+                    };
+                    pc.onicegatheringstatechange = check;
+                    // Timeout fallback
+                    setTimeout(resolve, 3000);
+                });
+            }
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'webrtc_offer',
+                    sdp: pc.localDescription.sdp
+                }));
+            }
+        } catch(e) {
+            console.error('WebRTC offer error:', e);
+        } finally {
+            _webrtcPending = false;
+        }
+    }
+
+    function destroyWebRTC() {
+        _stopVideoStallDetector();
+        _webrtcPending = false;
+        if (webrtcReconnectTimer) { clearTimeout(webrtcReconnectTimer); webrtcReconnectTimer = null; }
+        if (pc) { pc.close(); pc = null; }
+        h264El.srcObject = null;
+        h264El.style.display = 'none';
+        videoEl.style.display = 'block';
+    }
+
+    function setEncoding(enc) {
+        if (enc === currentEncoding) return;
+        currentEncoding = enc;
+        if (enc === 'h264') {
+            startWebRTC();
+        } else {
+            destroyWebRTC();
+        }
+    }
+
+    var _prevBlobUrl = null;
+
+    function applyDisplayRotation(rot, resolution) {
+        if (rot === currentDisplayRotation) return;
+        currentDisplayRotation = rot;
+        var wrapper = document.getElementById('video-wrapper');
+        var els = [videoEl, h264El];
+        if ((rot === 90 || rot === 270) && resolution) {
+            var parts = resolution.split('x');
+            var W = parseInt(parts[0]) || 1920;
+            var H = parseInt(parts[1]) || 1080;
+            wrapper.style.aspectRatio = W + '/' + H;
+            var pctW = (H / W * 100).toFixed(4) + '%';
+            var pctH = (W / H * 100).toFixed(4) + '%';
+            els.forEach(function(el) {
+                el.style.position = 'absolute';
+                el.style.top = '50%';
+                el.style.left = '50%';
+                el.style.width = pctW;
+                el.style.height = pctH;
+                el.style.minHeight = '0';
+                el.style.transform = 'translate(-50%, -50%) rotate(' + rot + 'deg)';
+            });
+        } else {
+            wrapper.style.aspectRatio = '';
+            els.forEach(function(el) {
+                el.style.position = '';
+                el.style.top = '';
+                el.style.left = '';
+                el.style.width = '';
+                el.style.height = '';
+                el.style.minHeight = '';
+                el.style.transform = rot === 180 ? 'rotate(180deg)' : '';
+            });
+        }
+    }
+
+    function connect(cameraId) {
+        if (connecting) return;
+        connecting = true;
+        isSwitching = false;
+        if (switchTimeout) { clearTimeout(switchTimeout); switchTimeout = null; }
+        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+        if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
+        _stopWsActivityMonitor();
+        if (ws) {
+            ws.onopen = null;
+            ws.onmessage = null;
+            ws.onclose = null;
+            ws.onerror = null;
+            ws.close();
+            ws = null;
+        }
+        destroyWebRTC();
+        currentCamera = cameraId;
+        currentEncoding = 'jpeg';
+        currentDisplayRotation = 0;
+        streamFps = 1;
+        statusEl.className = 'status-connecting';
+        statusEl.textContent = 'connecting...';
+        var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        var wsUrl = proto + '//' + location.host + '/ws/viewer/?camera_id=' + cameraId;
+        if (sessionKey) { wsUrl += '&session_key=' + sessionKey; }
+        try {
+            var socket = new WebSocket(wsUrl);
+        } catch(e) {
+            connecting = false;
+            scheduleReconnect(3000);
+            return;
+        }
+        ws = socket;
+        socket.binaryType = 'arraybuffer';
+
+        connectTimeout = setTimeout(function() {
+            if (socket !== ws) return;
+            if (socket.readyState !== WebSocket.OPEN) {
+                socket.onopen = null;
+                socket.onmessage = null;
+                socket.onclose = null;
+                socket.onerror = null;
+                socket.close();
+                ws = null;
+                connecting = false;
+                scheduleReconnect(2000);
+            }
+        }, 5000);
+
+        socket.onopen = function() {
+            if (socket !== ws) return;
+            connecting = false;
+            if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
+            statusEl.className = 'status-connected';
+            statusEl.textContent = '● connected — ' + cameraId;
+            _startWsActivityMonitor();
+        };
+        socket.onmessage = function(event) {
+            if (socket !== ws) return;
+            _lastWsMessageTime = Date.now();
+            if (statusEl.className !== 'status-connected') {
+                connecting = false;
+                if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
+                statusEl.className = 'status-connected';
+                statusEl.textContent = '● connected — ' + currentCamera;
+            }
+            // Binary = JPEG fallback only (H.264 goes via WebRTC)
+            if (event.data instanceof ArrayBuffer) {
+                if (isSwitching) return;
+                // JPEG frame display
+                var blob = new Blob([event.data], {type: 'image/jpeg'});
+                var url = URL.createObjectURL(blob);
+                if (_prevBlobUrl) URL.revokeObjectURL(_prevBlobUrl);
+                _prevBlobUrl = url;
+                videoEl.src = url;
+                return;
+            }
+            if (typeof event.data === 'string') {
+                try {
+                    var m = JSON.parse(event.data);
+                    if (m.error === 'unauthenticated') {
+                        window.location.href = '/login/';
+                        return;
+                    }
+                    // WebRTC SDP answer from server
+                    if (m.type === 'webrtc_answer' && pc) {
+                        pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }).catch(function(e) {
+                            console.error('setRemoteDescription error:', e);
+                        });
+                        return;
+                    }
+                    if (m.type === 'webrtc_error') {
+                        console.error('WebRTC server error:', m.error);
+                        return;
+                    }
+                    // Camera switch ack
+                    if (m.type === 'switched') {
+                        destroyWebRTC();
+                        currentEncoding = 'jpeg';
+                        currentDisplayRotation = 0;
+                        isSwitching = false;
+                        if (switchTimeout) { clearTimeout(switchTimeout); switchTimeout = null; }
+                        return;
+                    }
+                    if (isSwitching) return;
+                    // JPEG frame (base64)
+                    if (m.type === 'frame' && m.data) {
+                        var bin = atob(m.data);
+                        var len = bin.length;
+                        var arr = new Uint8Array(len);
+                        for (var bi = 0; bi < len; bi++) arr[bi] = bin.charCodeAt(bi);
+                        var blob = new Blob([arr], {type: 'image/jpeg'});
+                        var url = URL.createObjectURL(blob);
+                        if (_prevBlobUrl) URL.revokeObjectURL(_prevBlobUrl);
+                        _prevBlobUrl = url;
+                        videoEl.src = url;
+                        return;
+                    }
+                    // Metadata
+                    if (m.bitrate_kbps !== undefined) {
+                        if (m.encoding) { setEncoding(m.encoding); }
+                        if (m.display_rotation !== undefined) {
+                            applyDisplayRotation(m.display_rotation, m.resolution);
+                        }
+                        if (m.current_fps !== undefined) {
+                            streamFps = m.current_fps;
+                        }
+                        if (m.motion_detection !== undefined) {
+                            applyMotionInfo(m);
+                        }
+                        applyMeta(m);
+                    }
+                } catch(e) {}
+            }
+        };
+
+    function applyMotionInfo(m) {
+        var wrap = document.getElementById('meta-motion-wrap');
+        var el = document.getElementById('meta-motion');
+        if (m.motion_detection) {
+            wrap.style.display = '';
+            if (m.detection_active) {
+                el.innerHTML = '<span class="motion-icon active"></span><span class="motion-detected">Detected</span>';
+            } else {
+                el.innerHTML = '<span class="motion-icon idle"></span><span class="motion-idle">Idle</span>';
+            }
+        } else {
+            wrap.style.display = 'none';
+        }
+    }
+
+    function applyMeta(m) {
+        var bitrate = m.bitrate_kbps || 0;
+        var bitrateText;
+        if (bitrate >= 1000) {
+            bitrateText = (bitrate / 1000).toFixed(2) + ' Mbps';
+        } else {
+            bitrateText = bitrate.toFixed(1) + ' kbps';
+        }
+        document.getElementById('meta-bitrate').textContent = bitrateText;
+        if (m.send_rate_mbps !== undefined) {
+            var sr = m.send_rate_mbps || 0;
+            document.getElementById('meta-sendrate').textContent = sr.toFixed(2) + ' MB/s';
+            document.getElementById('meta-sendrate-mh').textContent =
+                (sr * 60).toFixed(1) + ' MB/m · ' + (sr * 3600).toFixed(0) + ' MB/h';
+        }
+        _updateCharts(m);
+        document.getElementById('meta-timestamp').textContent = new Date(m.timestamp).toLocaleString();
+        document.getElementById('meta-wifi').textContent = (m.wifi_signal_dbm||0) + ' dBm';
+        var voltage = m.voltage_v || 0;
+        if (m.power && m.power.load_voltage_v !== undefined) {
+            voltage = m.power.load_voltage_v;
+        }
+        document.getElementById('meta-voltage').textContent = voltage.toFixed(3) + ' V';
+        if (m.cpu_percent !== undefined) {
+            document.getElementById('meta-cpu').textContent = m.cpu_percent.toFixed(1) + '%';
+        }
+        if (m.resolution !== undefined) {
+            document.getElementById('meta-resolution').textContent = m.resolution;
+        }
+        if (m.current_fps !== undefined) {
+            document.getElementById('meta-fps').textContent = m.current_fps + ' FPS';
+        }
+
+        if (m.color_space !== undefined) {
+            document.getElementById('meta-color').textContent = m.color_space;
+        }
+        if (m.power) {
+            var power = m.power;
+            if (power.battery_percent !== undefined) {
+                document.getElementById('meta-battery-wrap').style.display = '';
+                document.getElementById('meta-battery').textContent = power.battery_percent.toFixed(1) + '%';
+            } else { document.getElementById('meta-battery-wrap').style.display = 'none'; }
+            if (power.current_a !== undefined) {
+                document.getElementById('meta-power-current-wrap').style.display = '';
+                document.getElementById('meta-power-current').textContent = power.current_a.toFixed(3) + ' A';
+            } else { document.getElementById('meta-power-current-wrap').style.display = 'none'; }
+            if (power.power_w !== undefined) {
+                document.getElementById('meta-power-watts-wrap').style.display = '';
+                document.getElementById('meta-power-watts').textContent = power.power_w.toFixed(3) + ' W';
+            } else { document.getElementById('meta-power-watts-wrap').style.display = 'none'; }
+        } else {
+            document.getElementById('meta-battery-wrap').style.display = 'none';
+            document.getElementById('meta-power-current-wrap').style.display = 'none';
+            document.getElementById('meta-power-watts-wrap').style.display = 'none';
+        }
+    }
+        socket.onclose = function(event) {
+            if (socket !== ws) return;
+            ws = null;
+            connecting = false;
+            _stopWsActivityMonitor();
+            destroyWebRTC();
+            if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
+            statusEl.className = 'status-disconnected';
+            statusEl.textContent = '● disconnected — reconnecting...';
+            var delay = (event.code === 4401) ? 500 : 3000;
+            scheduleReconnect(delay);
+        };
+        socket.onerror = function() {};
+    }
+
+    function scheduleReconnect(delay) {
+        if (reconnectTimer) { clearTimeout(reconnectTimer); }
+        reconnectTimer = setTimeout(function() { connect(currentCamera); }, delay);
+    }
+
+    window.switchCamera = function(cameraId, el) {
+        document.querySelectorAll('.camera-select').forEach(function(t) { t.classList.remove('active'); });
+        el.classList.add('active');
+
+        destroyWebRTC();
+        currentEncoding = 'jpeg';
+        currentDisplayRotation = 0;
+        videoEl.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            isSwitching = true;
+            if (switchTimeout) clearTimeout(switchTimeout);
+            switchTimeout = setTimeout(function() {
+                if (isSwitching) {
+                    isSwitching = false;
+                    connect(currentCamera);
+                }
+            }, 5000);
+            ws.send(JSON.stringify({type: 'switch_camera', camera_id: cameraId}));
+            currentCamera = cameraId;
+            statusEl.textContent = '● connected — ' + cameraId;
+        } else {
+            connect(cameraId);
+        }
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() { connect(currentCamera); });
+    } else {
+        connect(currentCamera);
+    }
+
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden && (!ws || ws.readyState !== WebSocket.OPEN)) {
+            connect(currentCamera);
+        }
+    });
+
+    window.addEventListener('pageshow', function(event) {
+        if (event.persisted && (!ws || ws.readyState !== WebSocket.OPEN)) {
+            connect(currentCamera);
+        }
+    });
+
+    // Fullscreen toggle
+    var fsBtn = document.getElementById('fullscreen-btn');
+    var wrapper = document.getElementById('video-wrapper');
+    var isCssFs = false;
+
+    function enterCssFullscreen() {
+        wrapper.classList.add('css-fullscreen');
+        document.body.style.overflow = 'hidden';
+        isCssFs = true;
+        updateFsIcon(true);
+    }
+    function exitCssFullscreen() {
+        wrapper.classList.remove('css-fullscreen');
+        document.body.style.overflow = '';
+        isCssFs = false;
+        updateFsIcon(false);
+    }
+    function updateFsIcon(isFs) {
+        fsBtn.innerHTML = isFs
+            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>'
+            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
+    }
+
+    fsBtn.addEventListener('click', function() {
+        if (document.fullscreenElement || document.webkitFullscreenElement) {
+            (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+        } else if (isCssFs) {
+            exitCssFullscreen();
+        } else if (wrapper.requestFullscreen) {
+            wrapper.requestFullscreen().catch(function() { enterCssFullscreen(); });
+        } else if (wrapper.webkitRequestFullscreen) {
+            wrapper.webkitRequestFullscreen();
+        } else {
+            enterCssFullscreen();
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && isCssFs) { exitCssFullscreen(); }
+    });
+
+    function onFsChange() {
+        var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+        if (!isFs && !isCssFs) {
+            wrapper.style.maxWidth = '960px';
+            wrapper.style.borderRadius = '6px';
+        } else if (isFs) {
+            wrapper.style.maxWidth = 'none';
+            wrapper.style.borderRadius = '0';
+        }
+        updateFsIcon(isFs || isCssFs);
+    }
+    document.addEventListener('fullscreenchange', onFsChange);
+    document.addEventListener('webkitfullscreenchange', onFsChange);
+})();
+</script>
+{% endblock %}

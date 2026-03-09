@@ -1,0 +1,145 @@
+# Server docker-compose — production (VPS behind reverse proxy)
+# Usage: ./manage.sh start prod
+#
+# server + redis use host networking (required for WebRTC UDP).
+# nginx-proxy + acme-companion + proxy-bridge on proxynetwork (Docker bridge).
+# proxy-bridge reaches daphne via host gateway.
+#
+# Traffic flow:
+#   Internet → nginx-proxy (443/SSL) → proxy-bridge (80) → daphne (8000, host)
+#   WebRTC media flows directly via host network (UDP).
+#
+# Required: .env file with DJANGO_SECRET_KEY, CAMERA_TOKEN, DOMAIN, ACME_EMAIL
+#           Generate with: ./manage_server.sh init
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "127.0.0.1:6379:6379"
+    networks:
+      - proxynetwork
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build: .
+    restart: always
+    network_mode: host
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - DJANGO_DEBUG=false
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DJANGO_ALLOWED_HOSTS=${DOMAIN:-<domain>},localhost
+      - REDIS_URL=redis://127.0.0.1:6379/0
+      - CAMERA_TOKEN=${CAMERA_TOKEN:-}
+      - RECORDINGS_DIR=/app/recordings
+      - RECORDING_CHUNK_SIZE_MB=${RECORDING_CHUNK_SIZE_MB:-100}
+      - STUN_SERVER=${STUN_SERVER:-stun:stun.l.google.com:19302}
+      - TURN_SERVER=${TURN_SERVER:-}
+      - TURN_USERNAME=${TURN_USERNAME:-}
+      - TURN_PASSWORD=${TURN_PASSWORD:-}
+      - NETWORK_INTERFACE=${NETWORK_INTERFACE:-}
+    volumes:
+      - ./recordings:/app/recordings
+      - ./data:/app/data
+      - static_data:/app/staticfiles
+      - ./logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # Reverse proxy — auto-discovers containers via VIRTUAL_HOST env var
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy
+    container_name: nginx-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - certs:/etc/nginx/certs:ro
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    networks:
+      - proxynetwork
+
+  # Let's Encrypt auto-provisioning
+  acme-companion:
+    image: nginxproxy/acme-companion
+    container_name: nginx-acme
+    restart: always
+    environment:
+      - DEFAULT_EMAIL=${ACME_EMAIL:-}
+    volumes_from:
+      - nginx-proxy
+    volumes:
+      - certs:/etc/nginx/certs:rw
+      - acme:/etc/acme.sh
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - nginx-proxy
+    networks:
+      - proxynetwork
+
+  # Static files + websocket handling in front of daphne
+  proxy-bridge:
+    image: nginx:alpine
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    expose:
+      - "80"
+    volumes:
+      - ./nginx-proxy-bridge.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_data:/app/staticfiles:ro
+    environment:
+      - VIRTUAL_HOST=${DOMAIN:-<domain>}
+      - VIRTUAL_PORT=80
+      - LETSENCRYPT_HOST=${DOMAIN:-<domain>}
+      - LETSENCRYPT_EMAIL=${ACME_EMAIL:-}
+    networks:
+      - proxynetwork
+    depends_on:
+      - server
+      - nginx-proxy
+
+  # TURN relay — required for viewers behind Symmetric NAT / CGNAT (e.g. Orange PL 5G).
+  # Without TURN, direct UDP fails and those viewers see a black screen.
+  coturn:
+    image: coturn/coturn:alpine
+    restart: always
+    network_mode: host
+    command:
+      - --listening-port=${TURN_PORT:-3478}
+      - --listening-ip=0.0.0.0
+      - --external-ip=${TURN_EXTERNAL_IP:?TURN_EXTERNAL_IP required in .env}
+      - --min-port=${TURN_MIN_PORT:-49152}
+      - --max-port=${TURN_MAX_PORT:-49252}
+      - --lt-cred-mech
+      - --user=${TURN_USERNAME:-camrelay}:${TURN_PASSWORD:?TURN_PASSWORD required}
+      - --realm=${DOMAIN:-<domain>}
+      - --no-multicast-peers
+      - --no-cli
+      - --log-file=stdout
+      - --fingerprint
+
+volumes:
+  redis_data:
+  static_data:
+  certs:
+  vhost:
+  html:
+  acme:
+
+networks:
+  proxynetwork:
+    external: true
