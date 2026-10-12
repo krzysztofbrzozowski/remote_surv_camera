@@ -33,7 +33,7 @@ Use ./manage_server.sh (root wrapper) for:
 Modes:
   network           WebRTC + nginx on port 80, network_mode:host (default)
                     LAN development with auto-created admin user.
-  prod              Production behind reverse proxy (<domain>)
+  prod              Production behind reverse proxy (camera.example.com)
                     Requires .env with DJANGO_SECRET_KEY. Uses proxynetwork.
 
 Options:
@@ -129,7 +129,7 @@ else:
     if [ "$mode" = "network" ]; then
         echo "🌐 Nginx on port 80 — http://<your-ip>"
     elif [ "$mode" = "prod" ]; then
-        echo "🌐 Production — https://${DOMAIN:-<domain>} (via reverse proxy)"
+        echo "🌐 Production — https://${DOMAIN:-camera.example.com} (via reverse proxy)"
     fi
     echo "To view logs: ./manage.sh logs"
     echo "To stop: ./manage.sh stop"

@@ -35,11 +35,12 @@ rpi_streamer/logs/
 # Token files
 .token
 .token*
+!.token.example
 
 # Environment
 .env
-.env.local
-.env.production
+.env.*
+!.env.example
 
 # macOS
 .DS_Store
@@ -48,3 +49,17 @@ rpi_streamer/logs/
 exaples
 exaples/*
 _some_issues
+
+# Local camera configurations: publish templates only
+rpi_streamer/config.yaml
+rpi_streamer/config.yml
+rpi_streamer/config.json
+rpi_streamer/configs/*
+!rpi_streamer/configs/*.example.yaml
+!rpi_streamer/configs/.token.example
+
+# Private key material
+*.pem
+*.key
+*.p12
+*.pfx

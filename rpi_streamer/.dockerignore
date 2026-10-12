@@ -1,0 +1,16 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+logs/
+.env
+.env.*
+.token*
+config.yaml
+config.yml
+config.json
+configs/*
+!configs/*.example.yaml
+!configs/.token.example
+*.pem
+*.key

@@ -52,11 +52,11 @@ remote_surv_camera/
 │   │   ├── h264_output.py      # picamera2 H.264 StreamOutput helper
 │   │   └── ina219_power.py     # INA219 power monitor (optional)
 │   ├── configs/
-│   │   ├── macos-h264.yaml     # macOS H.264 local dev config
-│   │   ├── macos-cam.yaml      # macOS JPEG config
-│   │   ├── rpi-cam.yaml        # RPi regular camera config
-│   │   ├── rpi-ai-cam.yaml     # RPi AI camera config
-│   │   └── synthetic.yaml      # Synthetic test config
+│   │   ├── macos-h264.example.yaml # macOS H.264 local dev config
+│   │   ├── macos-cam.example.yaml # macOS JPEG config
+│   │   ├── rpi-cam.example.yaml # RPi regular camera config
+│   │   ├── rpi-ai-cam.example.yaml # RPi AI camera config
+│   │   └── synthetic.example.yaml # Synthetic test config
 │   └── requirements.txt
 │
 ├── server/                     # Django + Daphne + Redis (Docker)
@@ -88,7 +88,7 @@ remote_surv_camera/
 │   └── Dockerfile
 │
 ├── manage_server.sh            # Root wrapper → server/manage.sh
-├── manage_rpi_streamer.sh      # Streamer launcher
+├── manage_rpi_streamer.sh      # Streamer launcher + venv setup + auto-start
 ├── tests/
 │   └── stream_diagnostics.py   # Live stream quality analyzer
 └── README.md
@@ -114,7 +114,7 @@ All streamer options are set in a YAML file (path passed via `STREAMER_CONFIG` e
 
 ```yaml
 # Connection
-server_url:    "ws://192.168.1.100/ws/camera/feed/"  # WebSocket URL
+server_url:    "ws://192.0.2.10/ws/camera/feed/"  # WebSocket URL
 camera_token:  "<token>"                              # Generated in Django Admin → Cameras → Generate token
 camera_id:     "rpi-cam"                              # Unique camera name
 
@@ -185,6 +185,8 @@ Open **http://localhost:8000** and log in with `admin` / `admin`.
 ```bash
 cd rpi_streamer
 pip3 install -r requirements.txt
+(umask 077; cp configs/macos-h264.example.yaml configs/macos-h264.yaml)
+# Set server_url and your camera token in the local file.
 STREAMER_CONFIG=configs/macos-h264.yaml python3 main.py
 ```
 
@@ -215,6 +217,12 @@ cd server
 
 **Generate a per-device token:** Go to **Django Admin** → **Cameras** → select the camera → **Actions: Generate new auth token** → copy the token.
 
+Create a private configuration from the published template:
+
+```bash
+(umask 077; cp rpi_streamer/configs/rpi-cam.example.yaml rpi_streamer/configs/rpi-cam.yaml)
+```
+
 Edit `rpi_streamer/configs/rpi-cam.yaml`:
 
 ```yaml
@@ -235,11 +243,28 @@ Or use the interactive setup:
 ./manage_rpi_streamer.sh setup-token   # Fetches token from server API
 ```
 
-### 3 — Start the streamer
+### 3 — Set up Python environment
 
 ```bash
-./manage_rpi_streamer.sh rpi
+./manage_rpi_streamer.sh setup-venv        # Creates venv + installs requirements
 ```
+
+### 4 — Start the streamer
+
+```bash
+./manage_rpi_streamer.sh rpi               # Run interactively (foreground)
+```
+
+### 5 — Auto-start on boot (recommended for production)
+
+```bash
+./manage_rpi_streamer.sh enable-startup rpi   # Enable auto-start via systemd
+./manage_rpi_streamer.sh startup-status       # Check service status + logs
+./manage_rpi_streamer.sh startup-logs 100     # View last 100 lines of logs
+./manage_rpi_streamer.sh disable-startup      # Remove auto-start
+```
+
+Uses a **systemd user service** (`~/.config/systemd/user/rpi-streamer.service`) with `loginctl enable-linger` so the streamer starts at boot without requiring login. The service auto-restarts on failure (5s delay, max 10 restarts per 5 min). Logs go to journald (viewable via `startup-logs`).
 
 ---
 
@@ -320,14 +345,17 @@ The server automatically creates daily log files in `server/logs/YYYY-MM-DD/`:
 The RPi streamer supports loading the camera token from a file instead of the YAML config:
 
 ```bash
-echo "your-camera-token-here" > rpi_streamer/configs/.token
+(umask 077; cp rpi_streamer/configs/.token.example rpi_streamer/configs/.token)
+# Replace the placeholder in configs/.token with your own camera token.
 ```
+
+Only `*.example.yaml`, `config.example.json`, and `.token.example` are published. Runtime configurations, `.env` files, and real `.token` files are ignored by Git; keep deployment addresses and credentials in those local files.
 
 This file is git-ignored. If `camera_token` is not set in the YAML config, the streamer reads `configs/.token` automatically.
 
 ### Admin URL
 
-The Django admin panel is **not** at the default `/admin/` path for security. It is available at `/<admin-path>/`.
+The Django admin panel is **not** at the default `/admin/` path for security. The default is `/control-panel/`. Set `DJANGO_ADMIN_PATH` in your local server `.env` to choose a different URL segment; never commit your private value.
 
 ### Running Tests
 
@@ -380,6 +408,13 @@ Sends exact known data amounts via WebSocket, verifies recorded bytes on disk an
 ./manage_rpi_streamer.sh synthetic        # Synthetic test pattern
 ./manage_rpi_streamer.sh --config path/to/config.yaml
 ./manage_rpi_streamer.sh setup-token      # Interactive token fetch from server
+./manage_rpi_streamer.sh setup-venv       # Create venv + install requirements
+
+# Auto-start on boot (systemd)
+./manage_rpi_streamer.sh enable-startup rpi    # Enable auto-start
+./manage_rpi_streamer.sh disable-startup       # Disable auto-start
+./manage_rpi_streamer.sh startup-status        # Service status + logs
+./manage_rpi_streamer.sh startup-logs [N]      # Last N log lines (default: 50)
 ```
 
 ---
@@ -389,7 +424,7 @@ Sends exact known data amounts via WebSocket, verifies recorded bytes on disk an
 | File | Networking | Use case |
 |---|---|---|
 | `docker-compose.yml` | `network_mode:host`, Nginx :80 | **Network mode** — LAN development (default) |
-| `docker-compose.prod.yml` | Docker bridge (`proxynetwork`) + nginx-proxy :80/:443 | **Production** — VPS with SSL (<domain>) |
+| `docker-compose.prod.yml` | Docker bridge (`proxynetwork`) + nginx-proxy :80/:443 | **Production** — VPS with SSL (camera.example.com) |
 
 ### Production Mode
 
@@ -611,7 +646,7 @@ On every FPS transition, `force_key_frame()` is called to ensure the first frame
 
 Each camera can have its own authentication token, managed entirely in **Django Admin → Cameras**:
 
-1. Open Django Admin (`/<admin-path>/`) → **Cameras**
+1. Open Django Admin (`/control-panel/`) → **Cameras**
 2. Select one or more camera rows
 3. **Actions** → **Generate new auth token** → **Go**
 4. Copy the token from the `Token` column and paste into `rpi_streamer/configs/rpi-cam.yaml` as `camera_token`
@@ -705,7 +740,7 @@ This is read by all standard players (VLC, QuickTime, iOS, Android) and rotates 
 ```bash
 cd tests
 source venv/bin/activate
-python stream_diagnostics.py --host 192.168.1.100 -u admin -p admin --camera rpi-cam --duration 300 -v
+python stream_diagnostics.py --host 192.0.2.10 -u admin -p admin --camera rpi-cam --duration 300 -v
 ```
 
 **Example output (5-minute test on RPi, H.264 passthrough):**
@@ -756,3 +791,33 @@ WebRTC media (SRTP/UDP):
 - VPS / cloud server (any reachable address)
 
 All H.264 timing calculations (keyframe forcing, FPS gating) happen on the streamer side. The server forwards H.264 directly via WebRTC (aiortc SFU passthrough) — no decode/re-encode. Network latency between streamer and server does not affect keyframe timing. WebRTC handles its own congestion control and jitter buffering.
+
+---
+
+## Security
+
+### Hardening Applied
+
+| Area | Measure |
+|---|---|
+| **SSL/TLS** | Let's Encrypt via acme-companion; TLSv1.2+; HSTS preload (1 year) |
+| **Django** | `SECURE_SSL_REDIRECT`, `SECURE_PROXY_SSL_HEADER`, `CSRF_TRUSTED_ORIGINS` |
+| **Cookies** | `Secure`, `HttpOnly`, `SameSite=Lax` on both session and CSRF cookies |
+| **Passwords** | Enforced validators: min 12 chars, no common passwords, no numeric-only |
+| **Headers** | `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin`, `Permissions-Policy` |
+| **Rate limiting** | Nginx: `/login/` 5r/m, `/api/` 30r/m, general 10r/s; Django: per-IP login attempt tracking |
+| **Container** | Runs as non-root `appuser`; `no-new-privileges` security option |
+| **Open redirect** | `next` parameter validated via `url_has_allowed_host_and_scheme()` |
+| **Auth** | Token auth with `hmac.compare_digest` (timing-safe); per-device tokens in Django Admin; per-user camera access via `allowed_users` M2M |
+| **Recording paths** | Filename pattern validation + `resolve()` path traversal checks |
+| **Secrets** | `.env` file git-ignored; never printed to terminal; auto-generated by `init` |
+| **Admin URL** | Configurable via local `DJANGO_ADMIN_PATH`; default `/control-panel/` |
+| **2FA** | TOTP-based two-factor on admin panel (Google Authenticator / Apple Passwords) |
+| **TURN relay** | coturn with long-term credentials (`lt-cred-mech`); auth required for allocation; relay port range restricted (49152–49252); no multicast peers; credentials only served to authenticated viewers via `@login_required` view |
+
+### Known Limitations
+
+- SQLite in production (adequate for single-server, low-concurrency use)
+- Docker socket mounted in nginx-proxy and acme-companion (required for container auto-discovery)
+- WebSocket session key fallback for Safari (short-lived, session-scoped)
+- No Content Security Policy header (would require `unsafe-inline` for current templates)

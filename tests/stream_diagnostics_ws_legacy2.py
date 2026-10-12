@@ -7,9 +7,9 @@ for glitches: duplicate/repeated frames, stuttering, timing irregularities,
 and visual corruption.
 
 Usage:
-    python stream_diagnostics.py --host 192.168.1.101 --user admin --password admin
-    python stream_diagnostics.py --host 192.168.1.101 --user admin --password admin --duration 60
-    python stream_diagnostics.py --host 192.168.1.101 --user admin --password admin --save-frames
+    python stream_diagnostics.py --host 192.0.2.11 --user admin --password admin
+    python stream_diagnostics.py --host 192.0.2.11 --user admin --password admin --duration 60
+    python stream_diagnostics.py --host 192.0.2.11 --user admin --password admin --save-frames
 """
 
 import argparse
@@ -959,8 +959,8 @@ def main():
         description="Stream diagnostics — detect duplicate/repeated frames, "
                     "stuttering, and visual corruption in a live WebSocket stream."
     )
-    parser.add_argument("--host", default="192.168.1.101",
-                        help="Server hostname or IP (default: 192.168.1.101)")
+    parser.add_argument("--host", default="192.0.2.11",
+                        help="Server hostname or IP (default: 192.0.2.11)")
     parser.add_argument("--user", "-u", required=True,
                         help="Login username")
     parser.add_argument("--password", "-p", required=True,

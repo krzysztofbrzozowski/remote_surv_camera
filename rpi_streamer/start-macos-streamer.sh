@@ -12,6 +12,11 @@ set -e
 
 cd "$(dirname "$0")"
 
+if [ ! -f configs/macos-cam.yaml ]; then
+    echo "Copy configs/macos-cam.example.yaml to configs/macos-cam.yaml and configure it first."
+    exit 1
+fi
+
 echo "==> Setting up Python venv..."
 if [ ! -d "venv" ]; then
     python3 -m venv venv

@@ -1,3 +1,5 @@
+# Copy configs/rpi-cam.example.yaml to configs/rpi-cam.yaml first.
+# Set server_url and camera_token locally (or explicitly mount configs/.token).
 # RPi Streamer — Raspberry Pi camera via picamera2
 # Usage:
 #   1. Edit configs/rpi-cam.yaml (set server_url to your VPS)

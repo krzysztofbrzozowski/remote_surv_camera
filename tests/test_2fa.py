@@ -26,6 +26,7 @@ if _server_dir not in sys.path:
     sys.path.insert(0, _server_dir)
 django.setup()
 
+from django.urls import reverse
 from django.contrib.auth.models import User
 from django.test import TestCase, Client, override_settings
 from django_otp.plugins.otp_totp.models import TOTPDevice
@@ -232,7 +233,7 @@ class AdminURLObscuredTest(TestCase):
         self.assertEqual(resp.status_code, 404)
 
     def test_new_admin_url_exists(self):
-        resp = self.client.get("/<admin-path>/", follow=False)
+        resp = self.client.get(reverse("admin:index"), follow=False)
         # Should redirect to login (302) since we're not authenticated
         self.assertIn(resp.status_code, [200, 302])
 
@@ -252,6 +253,7 @@ class TwoFactorPagesTest(TestCase):
         resp = self.client.get("/account/two_factor/")
         self.assertEqual(resp.status_code, 200)
         self.assertIn("Not enabled", resp.content.decode())
+        self.assertContains(resp, 'href="' + reverse("admin:index") + '"')
 
     def test_setup_page(self):
         resp = self.client.get("/account/two_factor/setup/")

@@ -16,6 +16,23 @@ Streams camera feed + metadata to Django server via WebSocket with dynamic FPS b
 
 ## Quick Start
 
+Run from `rpi_streamer/`. Only example configurations and a placeholder token are tracked.
+Before starting a source, copy its `configs/<source>.example.yaml` to the matching
+`configs/<source>.yaml` and set `server_url`. Put the camera token in the local YAML
+or in `configs/.token`; both runtime files are ignored by Git.
+
+For example:
+
+```bash
+(umask 077; cp configs/synthetic.example.yaml configs/synthetic.yaml)
+(umask 077; cp configs/.token.example configs/.token)
+# Edit synthetic.yaml and replace the placeholder in .token with your own token.
+```
+
+Use the corresponding template for macOS, RPi, or RPi AI below.
+For Docker, set `camera_token` in your local YAML or explicitly bind-mount
+`configs/.token` into the container; private files are excluded from the build context.
+
 ### Synthetic (no camera)
 ```bash
 STREAMER_CONFIG=configs/synthetic.yaml python3 main.py
@@ -50,7 +67,7 @@ rpi_streamer/
 │   ├── macos.py         # USB camera + sim
 │   ├── rpi_regular.py   # Regular RPi camera
 │   └── rpi_ai.py        # RPi AI Camera
-├── configs/             # Configuration files
+├── configs/             # Example configurations; local copies are git-ignored
 └── tests/               # Unit tests
 ```
 

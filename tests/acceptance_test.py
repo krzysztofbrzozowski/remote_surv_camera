@@ -32,9 +32,9 @@ import websockets
 # ── Configuration ──────────────────────────────────────────────────────────
 
 LOCAL_WS = "ws://localhost:8080/ws/camera/feed/"
-PROD_WS = "wss://<domain>:443/ws/camera/feed/"
+PROD_WS = ""  # Set TEST_SERVER_WS explicitly for remote tests
 TOKEN_FILE = os.path.join(os.path.dirname(__file__), "..", "rpi_streamer", "configs", ".token")
-LOCAL_TOKEN = "dev-token"
+LOCAL_TOKEN = "local-development-placeholder-token"
 
 
 def load_token(is_local: bool) -> str:
@@ -211,6 +211,8 @@ async def main():
     test_name = args[0] if args else "all"
 
     ws_url = os.environ.get("TEST_SERVER_WS", LOCAL_WS if is_local else PROD_WS)
+    if not ws_url:
+        sys.exit("Set TEST_SERVER_WS for remote tests, or use --local")
     token = load_token(is_local)
     ssl_ctx = ssl.create_default_context() if ws_url.startswith("wss") else None
 

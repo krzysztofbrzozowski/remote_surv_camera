@@ -1,6 +1,8 @@
+# Copy to synthetic.yaml and configure locally. Never commit real tokens.
 # Synthetic camera — generated test pattern, works anywhere
 # Use host.docker.internal when server runs in separate Docker compose
-server_url: "ws://localhost/ws/camera/feed/"
+server_url: "ws://localhost:8000/ws/camera/feed/"
+camera_token: ""  # Read from the ignored configs/.token file
 camera_id: "synthetic-cam"
 camera_source: "synthetic"
 

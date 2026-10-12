@@ -1,7 +1,9 @@
+# Copy to rpi-ai-cam.yaml and configure locally. Never commit real tokens.
 # RPi AI Camera — Raspberry Pi AI Camera (IMX500) with hardware detection
 # Dynamically switches between 0.1 FPS (idle) and 30 FPS (detecting)
 # Deploy this file as config.yaml on the RPi
-server_url: "ws://192.168.1.101:8000/ws/camera/feed/"
+server_url: "ws://localhost:8000/ws/camera/feed/"
+camera_token: ""  # Read from the ignored configs/.token file
 camera_id: "rpi-ai-cam"
 camera_source: "rpi_ai"
 

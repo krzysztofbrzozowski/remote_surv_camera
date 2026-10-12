@@ -44,6 +44,11 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# Configure per installation; do not put a private admin URL in source control.
+ADMIN_URL_PATH = os.environ.get("DJANGO_ADMIN_PATH", "control-panel").strip("/")
+if not re.fullmatch(r"[A-Za-z0-9_-]+", ADMIN_URL_PATH):
+    raise ValueError("DJANGO_ADMIN_PATH must be a non-empty URL segment (letters, digits, _ or -)")
+
 ROOT_URLCONF = "surv_server.urls"
 
 TEMPLATES = [

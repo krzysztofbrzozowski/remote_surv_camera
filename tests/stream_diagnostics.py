@@ -12,9 +12,9 @@ Architecture:
     3. WebRTC (aiortc) → video frames (decoded by aiortc)
 
 Usage:
-    python stream_diagnostics.py --host 192.168.1.100 -u admin -p admin
-    python stream_diagnostics.py --host 192.168.1.100 -u admin -p admin --duration 600
-    python stream_diagnostics.py --host 192.168.1.100 -u admin -p admin -v --save-frames
+    python stream_diagnostics.py --host 192.0.2.10 -u admin -p admin
+    python stream_diagnostics.py --host 192.0.2.10 -u admin -p admin --duration 600
+    python stream_diagnostics.py --host 192.0.2.10 -u admin -p admin -v --save-frames
 """
 
 import argparse
@@ -795,8 +795,8 @@ def main():
         description="WebRTC stream diagnostics -- analyze video quality, "
                     "connection stability, and frame timing via aiortc."
     )
-    parser.add_argument("--host", default="192.168.1.100",
-                        help="Server hostname or IP (default: 192.168.1.100)")
+    parser.add_argument("--host", default="192.0.2.10",
+                        help="Server hostname or IP (default: 192.0.2.10)")
     parser.add_argument("--user", "-u", required=True, help="Login username")
     parser.add_argument("--password", "-p", required=True, help="Login password")
     parser.add_argument("--camera", default="rpi-cam",

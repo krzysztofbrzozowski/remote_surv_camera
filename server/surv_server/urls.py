@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import AdminSite
 from django.urls import include, path
@@ -40,7 +41,7 @@ admin.site.__class__ = AdminSiteOTP
 urlpatterns = [
     # two_factor URLs (login, setup, QR, etc.) — needed for admin 2FA
     path("", include(tf_urls)),
-    path("<admin-path>/", admin.site.urls),
+    path(settings.ADMIN_URL_PATH + "/", admin.site.urls),
     path("", views.live_view, name="live"),
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),

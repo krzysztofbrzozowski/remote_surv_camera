@@ -1,3 +1,5 @@
+# Copy configs/synthetic.example.yaml to configs/synthetic.yaml first.
+# Set server_url and camera_token locally (or explicitly mount configs/.token).
 # RPi Streamer — synthetic test pattern
 # Usage: docker compose -f docker-compose.synthetic.yml up --build
 #

@@ -1,6 +1,8 @@
+# Copy to macos-cam.yaml and configure locally. Never commit real tokens.
 # macOS camera — uses built-in or USB webcam via OpenCV
 # Real motion detection (frame differencing algorithm)
-server_url: "ws://192.168.1.100:8000/ws/camera/feed/"
+server_url: "ws://localhost:8000/ws/camera/feed/"
+camera_token: ""  # Read from the ignored configs/.token file
 camera_id: "macos-cam"
 camera_source: "macos"
 

@@ -8,7 +8,7 @@ flowchart LR
         RPI["📷 RPi Streamer"]
     end
 
-    subgraph VPS["🖥️  VPS (<server-ip>)"]
+    subgraph VPS["🖥️  VPS (203.0.113.10)"]
         direction TB
         NGX_P["nginx-proxy\n:443 SSL"]
         PB["proxy-bridge\n:80"]
@@ -20,7 +20,7 @@ flowchart LR
         DAPH <-->|pub/sub| REDIS2
     end
 
-    CF["☁️  Cloudflare\nDNS + CDN + WAF\n<domain>"]
+    CF["☁️  Cloudflare\nDNS + CDN + WAF\ncamera.example.com"]
 
     subgraph User["🌐 End User Browser"]
         BR["Browser"]

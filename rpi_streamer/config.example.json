@@ -1,12 +1,12 @@
 {
-    "server_url": "ws://server:8000/ws/camera/feed/",
-    "camera_token": "rpi-camera-secret-token",
-    "camera_id": "cam-1",
-    "camera_source": "synthetic",
-    "frame_width": 640,
-    "frame_height": 480,
-    "fps": 15,
-    "jpeg_quality": 70,
-    "_comment": "Optional: camera_rotation (0, 90, 180, 270) for physically rotated cameras (rpi source only)",
-    "camera_rotation": 0
+  "server_url": "ws://server:8000/ws/camera/feed/",
+  "camera_token": "",
+  "camera_id": "cam-1",
+  "camera_source": "synthetic",
+  "frame_width": 640,
+  "frame_height": 480,
+  "fps": 15,
+  "jpeg_quality": 70,
+  "_comment": "Optional: camera_rotation (0, 90, 180, 270) for physically rotated cameras (rpi source only)",
+  "camera_rotation": 0
 }

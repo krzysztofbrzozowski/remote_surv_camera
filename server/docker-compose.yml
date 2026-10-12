@@ -21,6 +21,7 @@ services:
     network_mode: host
     environment:
       - DJANGO_DEBUG=true
+      - DJANGO_ADMIN_PATH=${DJANGO_ADMIN_PATH:-control-panel}
       - DJANGO_SECRET_KEY=local-dev-only-not-for-production-change-me
       - DJANGO_ALLOWED_HOSTS=*
       - REDIS_URL=redis://127.0.0.1:6379/0

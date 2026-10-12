@@ -1,3 +1,5 @@
+# Copy configs/macos-cam.example.yaml to configs/macos-cam.yaml first.
+# Set server_url and camera_token locally (or explicitly mount configs/.token).
 # RPi Streamer — macOS camera via OpenCV
 # ⚠️  Docker Desktop for Mac CANNOT access the camera device.
 # 

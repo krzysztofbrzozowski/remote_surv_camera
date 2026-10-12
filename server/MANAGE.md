@@ -31,8 +31,9 @@ cd server
 ./manage_server.sh init-prod
 ```
 Interactive wizard that creates `server/.env` with all required production secrets:
-- **Domain** — your production domain (default: `<domain>`)
-- **ACME email** — email for Let's Encrypt certificate registration via acme-companion
+- **Domain** — your production domain (required; no personal default)
+- **ACME email** — email for Let's Encrypt certificate registration via acme-companion (required)
+- **DJANGO_ADMIN_PATH** — admin URL segment; defaults to `control-panel`, configurable in your local `.env`
 - **DJANGO_SECRET_KEY** — auto-generated 50-char random key
 - **CAMERA_TOKEN** — auto-generated URL-safe token for camera authentication
 - **STUN_SERVER** — optional STUN server for NAT traversal
@@ -105,7 +106,7 @@ Deletes a user account and all associated data (2FA devices, sessions).
 ```
 Modes:
 - `network` (default) — WebRTC + nginx on port 80, `network_mode:host`. LAN development.
-- `prod` — Production behind reverse proxy (<domain>). Requires `.env` with `DJANGO_SECRET_KEY`.
+- `prod` — Production behind reverse proxy (camera.example.com). Requires `.env` with `DJANGO_SECRET_KEY`.
 
 **Auto-creates admin user in network mode:**
 - Username: `admin`
@@ -202,7 +203,7 @@ By default, no external STUN server is used (no outbound connections). For VPS b
   - `DOMAIN` — production domain
   - `ACME_EMAIL` — email for Let's Encrypt registration
   - `STUN_SERVER` — optional STUN server for NAT traversal
-  - `TURN_SERVER` — TURN relay URL (auto-detected or manual, e.g. `turn:<server-ip>:3478?transport=udp`)
+  - `TURN_SERVER` — TURN relay URL (auto-detected or manual, e.g. `turn:203.0.113.10:3478?transport=udp`)
   - `TURN_USERNAME` — TURN long-term credential username (default: `camrelay`)
   - `TURN_PASSWORD` — TURN long-term credential password (auto-generated)
 

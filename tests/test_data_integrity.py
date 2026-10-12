@@ -16,8 +16,8 @@ Usage:
     python3 test_data_integrity.py large_frames
 
 Environment:
-    TEST_SERVER_WS     WebSocket URL (default: wss://<domain>:443/ws/camera/feed/)
-    TEST_SERVER_SSH    SSH destination (default: <username>@<server-ip>)
+    TEST_SERVER_WS     WebSocket URL (required)
+    TEST_SERVER_SSH    SSH destination (required)
     TEST_SSH_KEY       SSH key path
     TEST_CAMERA_TOKEN  Camera auth token (or reads from rpi_streamer/configs/.token)
 """
@@ -33,11 +33,9 @@ from dataclasses import dataclass, field
 import websockets
 
 # ── Configuration ──────────────────────────────────────────────────────────
-SERVER_WS = os.environ.get("TEST_SERVER_WS", "wss://<domain>:443/ws/camera/feed/")
-SSH_DEST = os.environ.get("TEST_SERVER_SSH", "<username>@<server-ip>")
-SSH_KEY = os.environ.get("TEST_SSH_KEY",
-    os.path.expanduser("~/.ssh/keys/<server-ip>_<server-name>/"
-                       "ed25519_<server-ip>_<username>_<server-name>"))
+SERVER_WS = os.environ.get("TEST_SERVER_WS", "")
+SSH_DEST = os.environ.get("TEST_SERVER_SSH", "")
+SSH_KEY = os.path.expanduser(os.environ.get("TEST_SSH_KEY", "~/.ssh/id_ed25519"))
 DOCKER_CONTAINER = os.environ.get("TEST_DOCKER_CONTAINER", "server-server-1")
 RECORDINGS_DIR = "/app/recordings"
 
@@ -58,6 +56,9 @@ def load_token():
                 return t
     raise RuntimeError("No camera token found. Set TEST_CAMERA_TOKEN or create rpi_streamer/configs/.token")
 
+
+if not SERVER_WS or not SSH_DEST:
+    raise RuntimeError("Set TEST_SERVER_WS and TEST_SERVER_SSH explicitly before running remote tests")
 
 TOKEN = load_token()
 AUTH_HEADERS = {"Authorization": f"Token {TOKEN}"}

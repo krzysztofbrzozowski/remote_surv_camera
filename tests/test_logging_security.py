@@ -48,10 +48,10 @@ class SanitizationTest(TestCase):
         return mod.sanitize(text)
 
     def test_camera_token_masked(self):
-        text = 'camera_token: ujodB33jDTeWRDalo2ciZtbwodM6Uf3bnWSnVNqOcAs'
+        text = 'camera_token: test-only-camera-token-00000000000000000000'
         result = self._sanitize(text)
-        self.assertNotIn("ujodB33jDTeWRDalo2ciZtbwodM6Uf3bnWSnVNqOcAs", result)
-        self.assertIn("ujod***", result)
+        self.assertNotIn("test-only-camera-token-00000000000000000000", result)
+        self.assertIn("test***", result)
 
     def test_password_masked(self):
         text = 'password: SuperSecret123!'
@@ -65,10 +65,10 @@ class SanitizationTest(TestCase):
         self.assertNotIn("django-insecure-abc123xyz456", result)
 
     def test_api_key_masked(self):
-        text = 'api_key: "sk-proj-1234567890abcdefghij"'
+        text = 'api_key: "test-only-api-key-0000000000000000"'
         result = self._sanitize(text)
-        self.assertNotIn("sk-proj-1234567890abcdefghij", result)
-        self.assertIn("sk-p***", result)
+        self.assertNotIn("test-only-api-key-0000000000000000", result)
+        self.assertIn("test***", result)
 
     def test_authorization_header_masked(self):
         text = 'Authorization: Token rpi-abc123def456ghi789jkl'
@@ -82,10 +82,10 @@ class SanitizationTest(TestCase):
         self.assertNotIn("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", result)
 
     def test_json_token_masked(self):
-        text = '"token": "ujodB33jDTeWRDalo2ciZtbwodM6Uf3bnWSnVNqOcAs"'
+        text = '"token": "test-only-camera-token-00000000000000000000"'
         result = self._sanitize(text)
-        self.assertNotIn("ujodB33jDTeWRDalo2ciZtbwodM6Uf3bnWSnVNqOcAs", result)
-        self.assertIn("ujod***", result)
+        self.assertNotIn("test-only-camera-token-00000000000000000000", result)
+        self.assertIn("test***", result)
 
     def test_non_sensitive_text_unchanged(self):
         text = "2026-02-24 12:00:00 INFO Camera connected successfully"
@@ -215,7 +215,7 @@ class DailyLogsWebAccessTest(TestCase):
         log_dir.mkdir(parents=True)
         log_file = log_dir / "server.log"
         log_file.write_text(
-            'camera_token: ujodB33jDTeWRDalo2ciZtbwodM6Uf3bnWSnVNqOcAs\n'
+            'camera_token: test-only-camera-token-00000000000000000000\n'
             'password: mysuperpassword123\n'
             'Normal log line\n'
         )
@@ -231,9 +231,9 @@ class DailyLogsWebAccessTest(TestCase):
             self.assertEqual(resp.status_code, 200)
             content = resp.content.decode()
             # Sensitive values must be masked
-            self.assertNotIn("ujodB33jDTeWRDalo2ciZtbwodM6Uf3bnWSnVNqOcAs", content)
+            self.assertNotIn("test-only-camera-token-00000000000000000000", content)
             self.assertNotIn("mysuperpassword123", content)
-            self.assertIn("ujod***", content)
+            self.assertIn("test***", content)
             self.assertIn("mysu***", content)
             # Normal text unchanged
             self.assertIn("Normal log line", content)

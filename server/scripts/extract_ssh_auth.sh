@@ -6,7 +6,7 @@
 #
 # Setup (run once as root or with sudo):
 #   sudo crontab -e
-#   # Add:  * * * * * /home/<username>/REPOS/remote_surv_camera/server/scripts/extract_ssh_auth.sh
+#   # Add:  * * * * * /home/camera-user/REPOS/remote_surv_camera/server/scripts/extract_ssh_auth.sh
 #
 # The script must run as root (or a user in the 'adm' group) because
 # /var/log/auth.log is owned by syslog:adm with mode 640.
