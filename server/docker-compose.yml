@@ -29,6 +29,7 @@ services:
       - RECORDING_CHUNK_SIZE_MB=100
       - STUN_SERVER=${STUN_SERVER:-}
     volumes:
+      - database_data:/app/data
       - recordings_data:/app/recordings
       - static_data:/app/staticfiles
     depends_on:
@@ -45,5 +46,6 @@ services:
       - server
 
 volumes:
+  database_data:
   recordings_data:
   static_data:

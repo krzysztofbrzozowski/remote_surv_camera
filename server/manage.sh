@@ -104,7 +104,8 @@ cmd_start() {
             2>/dev/null && echo "🔧 iptables: bridge→host + WebRTC UDP configured" || true
     fi
     
-    docker compose -f $compose_file up -d
+    # Reuse build cache, but always include current local application files.
+    docker compose -f $compose_file up --build -d
     
     # Auto-create admin user for network mode (development)
     if [ "$mode" = "network" ]; then
@@ -207,7 +208,7 @@ cmd_rebuild() {
     
     echo "🔨 Rebuilding and restarting server..."
     
-    docker compose -f $compose_file down
+    # Recreate changed services without taking down Redis and the proxy.
     docker compose -f $compose_file up --build -d
     
     # Auto-create admin user for network mode

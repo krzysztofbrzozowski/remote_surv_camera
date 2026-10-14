@@ -1,8 +1,11 @@
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin import AdminSite
+from django.templatetags.static import static
 from django.urls import include, path
+from django.views.generic import RedirectView
 from surv_server.stream import views
+from surv_server.stream import climate
 
 from django_otp import user_has_device
 from two_factor.urls import urlpatterns as tf_urls
@@ -37,8 +40,12 @@ class AdminSiteOTP(AdminSite):
 
 
 admin.site.__class__ = AdminSiteOTP
+admin.site.site_header = "Telemetry"
+admin.site.site_title = "Telemetry"
+admin.site.index_title = "Device administration"
 
 urlpatterns = [
+    path("favicon.ico", RedirectView.as_view(url=static("icons/favicon.ico") + "?v=20261014-telemetry-1"), name="favicon"),
     # two_factor URLs (login, setup, QR, etc.) — needed for admin 2FA
     path("", include(tf_urls)),
     path(settings.ADMIN_URL_PATH + "/", admin.site.urls),
@@ -54,6 +61,16 @@ urlpatterns = [
     path("recordings/<str:filename>/mp4/", views.recording_h264_mp4, name="recording_h264_mp4"),
     path("recordings/<str:filename>/delete/", views.recording_delete, name="recording_delete"),
     path("api/cameras/", views.api_cameras, name="api_cameras"),
+    path("climate/", climate.dashboard, name="climate"),
+    path("api/climate/", climate.snapshot, name="api_climate"),
+    path("api/climate/export/", climate.export, name="climate_export"),
+    # Both forms avoid a POST redirect when configuring existing MicroPython firmware.
+    path("api/measurements", climate.ingest, name="sensor_ingest"),
+    path("api/measurements/", climate.ingest),
+    path("api/measurements/timesync", climate.timesync, name="sensor_timesync"),
+    path("api/measurements/timesync/", climate.timesync),
+    path("api/measurements/timedelta/<int:seconds>", climate.time_delta, name="sensor_timedelta"),
+    path("api/measurements/timedelta/<int:seconds>/", climate.time_delta),
     path("admin-stats/", views.admin_stats_view, name="admin_stats"),
     path("api/server-stats/", views.api_server_stats, name="api_server_stats"),
     path("api/stats-history/", views.api_stats_history, name="api_stats_history"),

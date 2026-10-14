@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Camera, NetworkHourlyStat, Recording
+from .models import Camera, NetworkHourlyStat, Recording, Sensor, SensorReading
 
 
 def generate_tokens(modeladmin, request, queryset):
@@ -33,3 +33,33 @@ class NetworkHourlyStatAdmin(admin.ModelAdmin):
     list_display = ["date", "hour", "rx_mb", "tx_mb", "cpu_avg", "mem_avg", "sample_count"]
     list_filter = ["date"]
     readonly_fields = ["date", "hour", "rx_bytes", "tx_bytes", "cpu_sum", "mem_sum", "sample_count"]
+
+
+@admin.register(Sensor)
+class SensorAdmin(admin.ModelAdmin):
+    list_display = ["name", "sensor_id", "location", "mac_address", "is_active", "is_online", "last_seen"]
+    list_filter = ["is_active"]
+    search_fields = ["name", "sensor_id", "mac_address", "location"]
+    readonly_fields = ["token", "last_seen", "created_at"]
+    filter_horizontal = ["allowed_users"]
+    actions = [generate_tokens]
+    prepopulated_fields = {"sensor_id": ("name",)}
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if not obj.token:
+            obj.generate_token()
+
+
+@admin.register(SensorReading)
+class SensorReadingAdmin(admin.ModelAdmin):
+    list_display = ["sensor", "timestamp", "temperature", "humidity", "pressure", "battery_voltage"]
+    list_filter = ["sensor"]
+    date_hierarchy = "timestamp"
+    readonly_fields = ["sensor", "timestamp", "received_at", "temperature", "humidity", "pressure", "battery_voltage"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

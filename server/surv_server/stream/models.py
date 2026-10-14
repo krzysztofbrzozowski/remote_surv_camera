@@ -1,7 +1,10 @@
 import secrets
+from datetime import timedelta
 
 from django.conf import settings
+from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
+from django.utils import timezone
 
 
 class NetworkHourlyStat(models.Model):
@@ -92,3 +95,58 @@ class Recording(models.Model):
     @property
     def size_mb(self):
         return round(self.size_bytes / (1024 * 1024), 1)
+
+
+class Sensor(models.Model):
+    """Provisioned environmental station; tokens never grant browser access."""
+
+    sensor_id = models.SlugField(max_length=100, unique=True)
+    name = models.CharField(max_length=200)
+    location = models.CharField(max_length=200, blank=True)
+    mac_address = models.CharField(max_length=17, unique=True, validators=[
+        RegexValidator(r"^(?:[0-9a-f]{2}:){5}[0-9a-f]{2}$", "Use a MAC address such as aa:bb:cc:dd:ee:ff.")
+    ])
+    token = models.CharField(max_length=64, blank=True, editable=False)
+    is_active = models.BooleanField(default=True)
+    expected_interval_seconds = models.PositiveIntegerField(default=300, validators=[MinValueValidator(10)])
+    last_seen = models.DateTimeField(null=True, blank=True)
+    allowed_users = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="allowed_sensors")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name", "sensor_id"]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        self.mac_address = self.mac_address.strip().lower().replace("-", ":")
+        super().save(*args, **kwargs)
+
+    def generate_token(self):
+        self.token = secrets.token_urlsafe(32)
+        self.save(update_fields=["token"])
+        return self.token
+
+    @property
+    def is_online(self):
+        return bool(self.is_active and self.last_seen and self.last_seen >= timezone.now() - timedelta(
+            seconds=self.expected_interval_seconds * 3
+        ))
+
+
+class SensorReading(models.Model):
+    sensor = models.ForeignKey(Sensor, on_delete=models.CASCADE, related_name="readings")
+    timestamp = models.DateTimeField(default=timezone.now)
+    received_at = models.DateTimeField(auto_now_add=True)
+    temperature = models.FloatField()
+    humidity = models.FloatField(null=True, blank=True)
+    pressure = models.FloatField(null=True, blank=True, help_text="Pressure in hPa")
+    battery_voltage = models.FloatField(null=True, blank=True, help_text="Battery voltage (firmware adc field)")
+
+    class Meta:
+        ordering = ["-timestamp", "-pk"]
+        constraints = [models.UniqueConstraint(fields=["sensor", "timestamp"], name="unique_sensor_timestamp")]
+
+    def __str__(self):
+        return f"{self.sensor}: {self.temperature} °C @ {self.timestamp.isoformat()}"

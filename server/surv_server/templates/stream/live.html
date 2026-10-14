@@ -1,5 +1,5 @@
 {% extends "stream/base.html" %}
-{% block title %}Live — surv_cam{% endblock %}
+{% block title %}Live — Telemetry{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -93,8 +93,9 @@
 {% endblock %}
 
 {% block content %}
+<div class="page-heading"><div><h1>Live</h1><p>Real-time video streams and camera telemetry.</p></div><a href="{% url 'climate' %}" class="btn">View climate →</a></div>
 <div class="camera-bar">
-    <span class="label">camera:</span>
+    <span class="label">Cameras</span>
     {% for cam in cameras %}
     <a href="#" class="tag camera-select {% if cam.camera_id == selected_camera %}active{% endif %}"
        data-camera-id="{{ cam.camera_id }}"

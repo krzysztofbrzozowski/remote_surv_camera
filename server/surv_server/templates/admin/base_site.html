@@ -1,0 +1,25 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ title }} | Telemetry{% endblock %}
+{% block dark-mode-vars %}
+<script>
+    (function(){
+        var theme='light';
+        try {
+            var saved=localStorage.getItem('theme');
+            if(saved==='dark'||saved==='light'||saved==='auto'){theme=saved}
+            else {localStorage.setItem('theme','light')}
+        } catch(e) {}
+        document.documentElement.setAttribute('data-theme',theme);
+    })();
+</script>
+{{ block.super }}
+{% endblock %}
+{% block extrahead %}{{ block.super }}{% include "stream/includes/favicons.html" %}{% endblock %}
+{% block branding %}
+<div id="site-name">
+    <a href="{% url 'admin:index' %}" style="display:inline-flex;align-items:center;gap:7px;font-size:26px;font-weight:400;letter-spacing:-.8px;">
+        <span style="display:inline-flex;width:26px;height:26px;">{% include "stream/includes/brand_mark.html" %}</span>
+        <span>Telemetry</span>
+    </a>
+</div>
+{% endblock %}

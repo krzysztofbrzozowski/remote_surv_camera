@@ -1,10 +1,11 @@
 {% extends "stream/base.html" %}
-{% block title %}Sign in{% endblock %}
+{% block title %}Sign in — Telemetry{% endblock %}
 
 {% block content %}
 <div style="max-width: 380px; margin: 80px auto;">
     <div style="text-align:center; margin-bottom: 32px;">
-        <h1 style="font-size:1.4em; font-weight:600;">Sign in</h1>
+        <a class="brand login-brand" href="{% url 'live' %}" aria-label="Telemetry — home">{% include "stream/includes/brand_mark.html" %}<span>Telemetry</span></a>
+        <h1 style="font-size:2.5em; font-weight:600;">Sign in</h1><p>Access video streams and sensor data.</p>
     </div>
     <div class="card">
         {% if error %}
@@ -13,10 +14,10 @@
         <form method="post">
             {% csrf_token %}
             <label for="username">Username</label>
-            <input type="text" name="username" id="username" autofocus required placeholder="Enter username">
+            <input type="text" name="username" id="username" autocomplete="username" autofocus required placeholder="Your username">
             <label for="password">Password</label>
-            <input type="password" name="password" id="password" required placeholder="Enter password">
-            <button type="submit" class="btn btn-primary" style="width:100%; margin-top:4px; padding:11px; font-size:0.95em; border-radius:12px;">Sign in</button>
+            <input type="password" name="password" id="password" autocomplete="current-password" required placeholder="Your password">
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top:4px; padding:11px; font-size:0.95em; border-radius:8px;">Sign in →</button>
         </form>
     </div>
 </div>

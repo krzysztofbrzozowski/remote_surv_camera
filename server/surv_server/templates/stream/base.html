@@ -1,20 +1,23 @@
+{% load static %}
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en" class="h-full" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
     <title>{% block title %}{% endblock %}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    {% include "stream/includes/favicons.html" %}
     <script>
         /* Apply saved theme ASAP to avoid flash */
         (function(){var t=document.cookie.replace(/(?:(?:^|.*;)\s*theme\s*=\s*([^;]*).*$)|^.*$/,'$1');
-        if(!t){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'}
-        document.documentElement.setAttribute('data-theme',t)})();
+        if(t!=='dark'&&t!=='light'){t='light'}
+        document.documentElement.setAttribute('data-theme',t);
+        document.querySelector('meta[name="theme-color"]').setAttribute('content',t==='dark'?'#000000':'#ffffff')})();
     </script>
     <style>
         /* ═══ Apple-inspired CSS variables ═══ */
         :root, [data-theme="light"] {
-            --bg: #f2f2f7;
+            --bg: #ffffff;
             --surface: #ffffff;
             --surface-secondary: #f2f2f7;
             --surface-hover: rgba(0,0,0,0.04);
@@ -89,12 +92,10 @@
 
         /* ── Navbar — desktop ── */
         nav.navbar {
-            position: sticky;
-            top: 0;
+            position: relative;
             z-index: 40;
-            background: var(--nav-bg);
-            -webkit-backdrop-filter: saturate(180%) blur(20px);
-            backdrop-filter: saturate(180%) blur(20px);
+            background: var(--surface);
+            padding-top: var(--safe-area-top, env(safe-area-inset-top, 0px));
             border-bottom: 1px solid var(--border);
         }
         nav.navbar .nav-inner {
@@ -185,8 +186,7 @@
             box-shadow: var(--shadow);
             z-index: 100;
         }
-        .nav-dropdown:hover .nav-dropdown-menu,
-        .nav-dropdown:focus-within .nav-dropdown-menu { display: block; }
+        .nav-dropdown-menu.open { display: block; }
         .nav-dropdown-menu a {
             display: block;
             padding: 8px 16px;
@@ -205,14 +205,12 @@
         .mobile-nav {
             display: none;
             position: fixed;
-            bottom: 0; left: 0; right: 0;
+            bottom: var(--viewport-bottom-offset, 0px); left: 0; right: 0;
             z-index: 50;
-            background: var(--nav-bg);
-            -webkit-backdrop-filter: saturate(180%) blur(20px);
-            backdrop-filter: saturate(180%) blur(20px);
+            background: var(--surface);
             border-top: 1px solid var(--border);
             padding: 6px 0;
-            padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+            padding-bottom: calc(6px + var(--safe-area-bottom, env(safe-area-inset-bottom, 0px)));
         }
         .mobile-nav .mobile-nav-inner {
             display: flex;
@@ -398,30 +396,29 @@
             .btn-sm { min-height: 36px; }
         }
     </style>
+    <link rel="stylesheet" href="{% static 'css/observatory.css' %}?v=20261014-admin-2">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
     {% if user.is_authenticated %}
     <nav class="navbar">
         <div class="nav-inner">
-            <a class="brand" href="{% url 'live' %}">
-                <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="2" y="6" width="20" height="16" rx="3" stroke="var(--brand-stroke)" stroke-width="2.2" fill="none"/>
-                    <path d="M22 11l7-4v18l-7-4V11z" stroke="var(--brand-stroke)" stroke-width="2.2" fill="none" stroke-linejoin="round"/>
-                    <circle cx="12" cy="14" r="3" stroke="var(--brand-stroke)" stroke-width="1.8" fill="none"/>
-                    <circle cx="12" cy="14" r="1" fill="var(--brand-stroke)"/>
-                </svg>
+            <a class="brand" href="{% url 'live' %}" aria-label="Telemetry — home">
+                {% include "stream/includes/brand_mark.html" %}
+                <span>Telemetry</span>
             </a>
             <div class="nav-links">
-                <a href="{% url 'live' %}" {% if request.resolver_match.url_name == 'live' %}class="active"{% endif %}>Live</a>
-                <a href="{% url 'recordings' %}" {% if request.resolver_match.url_name == 'recordings' or request.resolver_match.url_name == 'recording_playback' %}class="active"{% endif %}>Recordings</a>
+                <a href="{% url 'live' %}" {% if request.resolver_match.url_name == 'live' %}class="active" aria-current="page"{% endif %}>Live</a>
+                <a href="{% url 'recordings' %}" {% if request.resolver_match.url_name == 'recordings' or request.resolver_match.url_name == 'recording_playback' %}class="active" aria-current="page"{% endif %}>Recordings</a>
+                <a href="{% url 'climate' %}" {% if request.resolver_match.url_name == 'climate' %}class="active" aria-current="page"{% endif %}>Climate</a>
                 {% if user.is_staff %}
                 <div class="nav-dropdown">
-                    <a {% if request.resolver_match.url_name == 'admin_stats' or request.resolver_match.url_name == 'admin_logs' or request.resolver_match.url_name == 'admin_daily_logs' or request.resolver_match.url_name == 'admin_daily_log_file' %}class="active"{% endif %}>Admin ▾</a>
-                    <div class="nav-dropdown-menu">
+                    <button type="button" id="desktop-admin-toggle" aria-expanded="false" aria-controls="desktop-admin-menu" {% if request.resolver_match.url_name == 'admin_stats' or request.resolver_match.url_name == 'admin_logs' or request.resolver_match.url_name == 'admin_daily_logs' or request.resolver_match.url_name == 'admin_daily_log_file' %}class="active"{% endif %}>Admin ▾</button>
+                    <div class="nav-dropdown-menu" id="desktop-admin-menu">
                         <a href="{% url 'admin_stats' %}" {% if request.resolver_match.url_name == 'admin_stats' %}class="active"{% endif %}>Stats</a>
                         <a href="{% url 'admin_logs' %}" {% if request.resolver_match.url_name == 'admin_logs' %}class="active"{% endif %}>Logs</a>
                         <a href="{% url 'admin_daily_logs' %}" {% if request.resolver_match.url_name == 'admin_daily_logs' or request.resolver_match.url_name == 'admin_daily_log_file' %}class="active"{% endif %}>Daily Logs</a>
+                        <a href="{% url 'admin:stream_sensor_changelist' %}">Sensors</a>
                     </div>
                 </div>
                 {% endif %}
@@ -444,8 +441,12 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="4"/><polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/></svg>
                 Recordings
             </a>
+            <a href="{% url 'climate' %}" {% if request.resolver_match.url_name == 'climate' %}class="active" aria-current="page"{% endif %}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 14.8V5a3 3 0 0 1 6 0v9.8a5 5 0 1 1-6 0Z"/><path d="M12 9v9"/><circle cx="12" cy="18" r="1.5"/></svg>
+                Climate
+            </a>
             {% if user.is_staff %}
-            <a href="#" id="mobile-admin-toggle" {% if request.resolver_match.url_name == 'admin_stats' or request.resolver_match.url_name == 'admin_logs' or request.resolver_match.url_name == 'admin_daily_logs' or request.resolver_match.url_name == 'admin_daily_log_file' %}class="active"{% endif %}>
+            <a href="#" id="mobile-admin-toggle" role="button" aria-haspopup="true" aria-controls="mobile-admin-menu" aria-expanded="false" {% if request.resolver_match.url_name == 'admin_stats' or request.resolver_match.url_name == 'admin_logs' or request.resolver_match.url_name == 'admin_daily_logs' or request.resolver_match.url_name == 'admin_daily_log_file' %}class="active"{% endif %}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
                 Admin
             </a>
@@ -459,6 +460,7 @@
                 <a href="{% url 'admin_daily_logs' %}" {% if request.resolver_match.url_name == 'admin_daily_logs' or request.resolver_match.url_name == 'admin_daily_log_file' %}class="active"{% endif %}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Daily Logs
                 </a>
+                <a href="{% url 'admin:stream_sensor_changelist' %}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 14.8V5a3 3 0 0 1 6 0v9.8a5 5 0 1 1-6 0Z"/><path d="M12 9v9"/></svg>Sensors</a>
             </div>
             {% endif %}
             <button class="theme-toggle-mobile" onclick="toggleTheme()">
@@ -478,34 +480,19 @@
             {% block content %}{% endblock %}
         </div>
     </main>
-    <footer>© 2026</footer>
+    <footer><span>Telemetry</span> <span>Video streams &amp; sensor telemetry</span></footer>
     <script>
     /* Theme toggle */
     function toggleTheme(){
         var cur=document.documentElement.getAttribute('data-theme')||'light';
         var next=cur==='dark'?'light':'dark';
         document.documentElement.setAttribute('data-theme',next);
+        document.querySelector('meta[name="theme-color"]').setAttribute('content',next==='dark'?'#000000':'#ffffff');
         document.cookie='theme='+next+';path=/;max-age=31536000;SameSite=Lax';
         if(window._onThemeChange) window._onThemeChange(next);
     }
-    /* Mobile admin popup */
-    (function() {
-        var toggle = document.getElementById('mobile-admin-toggle');
-        var menu = document.getElementById('mobile-admin-menu');
-        if (toggle && menu) {
-            toggle.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                menu.classList.toggle('open');
-            });
-            document.addEventListener('click', function(e) {
-                if (!menu.contains(e.target) && e.target !== toggle) {
-                    menu.classList.remove('open');
-                }
-            });
-        }
-    })();
     </script>
+    <script src="{% static 'js/navigation.js' %}?v=20261014-admin-2" defer></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

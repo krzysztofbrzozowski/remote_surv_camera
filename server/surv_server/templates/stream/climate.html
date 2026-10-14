@@ -1,0 +1,46 @@
+{% extends "stream/base.html" %}
+{% load static %}
+{% block title %}Climate — Telemetry{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/climate.css' %}?v=20261013-minimal-1">{% endblock %}
+{% block content %}
+<div id="climate-app" data-api="{% url 'api_climate' %}" data-export="{% url 'climate_export' %}">
+    <div class="page-heading">
+        <div><h1>Climate</h1><p>Environmental measurements and sensor status.</p></div>
+        <div class="heading-actions"><span id="refresh-state" class="soft-label" role="status" aria-live="polite">Connecting…</span><button id="refresh-button" class="btn" type="button" aria-label="Refresh readings">↻ Refresh</button></div>
+    </div>
+    <div id="climate-error" class="climate-error" role="alert" hidden></div>
+    <div id="sensor-list" class="sensor-list" aria-label="Choose a sensor"></div>
+    <div id="climate-empty" class="empty-state card" hidden>
+        <div class="empty-icon" aria-hidden="true">°</div><h2>Ready for your first reading</h2><p>Add a sensor and assign it to your account. Its readings and history will appear here.</p>
+        {% if user.is_staff %}<a class="btn btn-primary" href="{% url 'admin:stream_sensor_changelist' %}">Manage sensors →</a>{% endif %}
+    </div>
+    <div id="climate-content" hidden>
+        <section class="climate-overview" aria-label="Current readings">
+            <article class="temperature-hero">
+                <div class="hero-top"><span class="eyebrow">Temperature now</span><span id="sensor-status" class="sensor-status"></span></div>
+                <div class="hero-reading"><span id="current-temperature">—</span><span class="hero-unit">°C</span></div>
+                <div class="hero-bottom"><div><h2 id="sensor-name"></h2><p id="sensor-location"></p></div><div id="reading-age" class="reading-age"></div></div>
+            </article>
+            <div class="metric-stack">
+                <article class="metric-card"><div><span class="metric-label">Humidity</span><span class="metric-value"><span id="current-humidity">—</span><small>%</small></span></div><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3S6 15 6 21a10 10 0 0 0 20 0C26 15 16 3 16 3Z"/><path d="M11 21a5 5 0 0 0 5 5"/></svg></article>
+                <article class="metric-card"><div><span class="metric-label">Pressure</span><span class="metric-value"><span id="current-pressure">—</span><small>hPa</small></span></div><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 25a13 13 0 1 1 22 0M16 5v4M5 16h4M23 16h4M16 20l7-9"/><circle cx="16" cy="20" r="2"/></svg></article>
+                <article class="metric-card"><div><span class="metric-label">Battery</span><span class="metric-value"><span id="current-battery">—</span><small>V</small></span></div><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="9" width="24" height="14" rx="3"/><path d="M29 13v6M8 13v6M13 13v6M18 13v6"/></svg></article>
+            </div>
+        </section>
+        <section class="history-card card" aria-label="Reading history">
+            <div class="section-heading"><h2>History</h2><div id="range-options" class="segmented" aria-label="Time range"><button data-range="1h">1 h</button><button data-range="24h">24 h</button><button data-range="7d">7 days</button><button data-range="10d">10 days</button><button data-range="30d">30 days</button></div></div>
+            <div class="chart-toolbar"><div id="metric-options" class="metric-options" aria-label="Chart metric"><button data-metric="temperature" class="active">Temperature</button><button data-metric="humidity">Humidity</button><button data-metric="pressure">Pressure</button><button data-metric="battery_voltage">Battery</button></div><span id="chart-resolution" class="soft-label"></span></div>
+            <div class="chart-stats"><div><span>Minimum</span><strong id="chart-min">—</strong></div><div><span>Average</span><strong id="chart-avg">—</strong></div><div><span>Maximum</span><strong id="chart-max">—</strong></div><div><span>Readings</span><strong id="chart-count">0</strong></div></div>
+            <div class="climate-chart" id="chart-wrap"><svg id="history-chart" viewBox="0 0 1080 260" role="img" aria-labelledby="chart-title chart-description"><title id="chart-title">Temperature history</title><desc id="chart-description">Loading readings.</desc></svg><div id="chart-empty" class="chart-empty" hidden>No readings in this period.</div><div id="chart-tooltip" class="chart-tooltip" hidden></div><input id="chart-cursor" class="chart-cursor" type="range" min="0" max="0" value="0" aria-label="Use the arrow keys to explore chart points"><span id="chart-announcement" class="sr-only" aria-live="polite"></span></div>
+            <div class="chart-foot"><span><i class="legend-dot"></i> <span id="chart-legend">Temperature</span></span><span id="chart-timezone"></span></div>
+        </section>
+        <div class="climate-details">
+            <section class="card daily-card"><div class="section-heading"><div><span class="eyebrow">Daily rhythm</span><h2>The last 24 hours</h2></div><span class="soft-label">°C / hour</span></div><div id="daily-grid" class="daily-grid"></div><div class="heat-legend"><span>Cooler</span><div></div><span>Warmer</span></div><p class="daily-caption">Average temperature for each hour. Empty tiles mean no readings.</p></section>
+            <section class="card device-card"><span class="eyebrow">Connectivity</span><h2 id="device-heading">Waiting for the first reading.</h2><p id="device-message"></p><dl><div><dt>Last contact</dt><dd id="device-seen">—</dd></div><div><dt>Sampling interval</dt><dd id="device-interval">—</dd></div><div><dt>View refresh</dt><dd>every 30 s</dd></div></dl></section>
+        </div>
+        <section class="card readings-card"><div class="section-heading"><div><span class="eyebrow">Reading log</span><h2>Latest readings</h2></div><a id="export-button" class="btn" href="{% url 'climate_export' %}">↓ Export CSV</a></div><div class="readings-scroll"><table><thead><tr><th>Time</th><th>Temperature</th><th>Humidity</th><th>Pressure</th><th>Battery</th></tr></thead><tbody id="readings-body"></tbody></table></div><p class="table-caption">The 20 latest readings in the selected period. Export includes all readings.</p></section>
+    </div>
+    <noscript><div class="card">Enable JavaScript to view charts and refresh readings automatically.</div></noscript>
+</div>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/climate.js' %}?v=20261013-minimal-1" defer></script>{% endblock %}

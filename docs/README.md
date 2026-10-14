@@ -1,5 +1,8 @@
 # Remote Surveillance Camera
 
+Environmental monitoring is available in the **Climate** tab, with ESP8266 / BME280
+ingestion, private sensor history and CSV export. See [sensor setup and API](climate.md).
+
 Multi-camera surveillance system. Raspberry Pi (or macOS) streamers capture and H.264-encode video, send it over WebSocket to a Django server, which delivers live video to browsers via **WebRTC** (aiortc SFU with H.264 passthrough — zero decode/re-encode on the server). Metadata flows over WebSocket. Everything is recorded in chunked H.264 files.
 
 ---

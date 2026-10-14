@@ -22,6 +22,7 @@ docker-data/
 
 # Django
 db.sqlite3
+server/data/backups/
 server/media/
 server/staticfiles/
 

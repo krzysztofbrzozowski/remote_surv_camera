@@ -1,5 +1,5 @@
 {% extends "stream/base.html" %}
-{% block title %}Recordings — surv_cam{% endblock %}
+{% block title %}Recordings — Telemetry{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -45,9 +45,10 @@
 {% endblock %}
 
 {% block content %}
+<div class="page-heading"><div><h1>Recordings</h1><p>Recorded video, playback, and downloads.</p></div></div>
 <div class="camera-bar">
-    <span class="label">Filter by camera:</span>
-    <a href="{% url 'recordings' %}" class="tag {% if not selected_camera %}active{% endif %}">all</a>
+    <span class="label">Cameras</span>
+    <a href="{% url 'recordings' %}" class="tag {% if not selected_camera %}active{% endif %}">All</a>
     {% for cam in cameras %}
     <a href="{% url 'recordings' %}?camera={{ cam.camera_id }}"
        class="tag {% if cam.camera_id == selected_camera %}active{% endif %}">
